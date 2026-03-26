@@ -1,0 +1,15 @@
+# Cloudflare Pages Configuration
+# https://developers.cloudflare.com/pages/platform/functions/
+
+[site]
+bucket = ".next"
+entry-point = "."
+
+[build]
+command = "npm run build"
+
+[build.environment]
+NODE_VERSION = "18"
+
+# Next.js on Cloudflare Pages
+# Using @cloudflare/next-on-pages adapter
