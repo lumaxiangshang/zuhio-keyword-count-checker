@@ -5,6 +5,7 @@ import Header from '@/components/Header';
 import Features from '@/components/Features';
 import SEOGuide from '@/components/SEOGuide';
 import VisitorCounter from '@/components/VisitorCounter';
+import UsageLimitAlert from '@/components/UsageLimitAlert';
 import { analyzeText, calculateKeywordDensity } from '@/lib/analyzer';
 import { translations, Language } from '@/lib/i18n';
 
@@ -64,6 +65,9 @@ export default function Home() {
               <span className="px-3 py-1 bg-white/10 rounded-full">Content Optimizer</span>
             </div>
           </div>
+
+          {/* Usage Limit Alert */}
+          <UsageLimitAlert used={7} limit={10} plan="free" />
 
           {/* Main Analyzer */}
           <div className="bg-white rounded-2xl shadow-2xl p-8 mb-8">
