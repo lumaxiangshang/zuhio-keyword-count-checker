@@ -55,6 +55,13 @@ export default function Home() {
             <p className="text-xl text-white/80 max-w-3xl mx-auto">
               {t.heroDescription}
             </p>
+            {/* SEO Keywords Bar */}
+            <div className="mt-6 flex flex-wrap justify-center gap-2 text-sm text-white/60">
+              <span className="px-3 py-1 bg-white/10 rounded-full">Free Keyword Density Checker</span>
+              <span className="px-3 py-1 bg-white/10 rounded-full">Word Count Tool</span>
+              <span className="px-3 py-1 bg-white/10 rounded-full">SEO Analyzer</span>
+              <span className="px-3 py-1 bg-white/10 rounded-full">Content Optimizer</span>
+            </div>
           </div>
 
           {/* Main Analyzer */}
@@ -190,10 +197,149 @@ export default function Home() {
             <SEOGuide language={language} />
           </div>
 
+          {/* SEO Content Section */}
+          <div className="mt-16 bg-white/5 backdrop-blur-sm rounded-2xl p-8">
+            <h2 className="text-3xl font-bold text-white text-center mb-8">
+              {language === 'zh' ? '为什么选择 Zuhio 关键词密度检查器？' : 'Why Choose Zuhio Keyword Density Checker?'}
+            </h2>
+            <div className="grid md:grid-cols-2 gap-8 text-white/80">
+              {language === 'zh' ? (
+                <>
+                  <div>
+                    <h3 className="text-xl font-bold text-white mb-3">🎯 专业 SEO 优化</h3>
+                    <p className="mb-4">
+                      Zuhio 是专业的<strong>关键词密度分析工具</strong>和<strong>词数统计工具</strong>，
+                      帮助您优化内容 SEO，提升 Google 搜索排名。免费使用，无需注册。
+                    </p>
+                    <h3 className="text-xl font-bold text-white mb-3">📊 实时分析</h3>
+                    <p className="mb-4">
+                      输入文本后立即显示<strong>关键词密度</strong>、<strong>词数统计</strong>、
+                      <strong>字符数</strong>、<strong>阅读时间</strong>等数据，支持中文和英文分析。
+                    </p>
+                    <h3 className="text-xl font-bold text-white mb-3">💡 智能建议</h3>
+                    <p>
+                      根据 SEO 行业标准提供<strong>关键词密度建议</strong>，
+                      避免关键词堆砌，让内容更自然、更易被搜索引擎收录。
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white mb-3">🚀 适用场景</h3>
+                    <ul className="space-y-2">
+                      <li>✓ 博客文章 SEO 优化</li>
+                      <li>✓ 网站内容关键词分析</li>
+                      <li>✓ 学术论文词数统计</li>
+                      <li>✓ 社交媒体内容优化</li>
+                      <li>✓ 电商产品描述优化</li>
+                      <li>✓ 邮件营销内容检查</li>
+                    </ul>
+                    <h3 className="text-xl font-bold text-white mt-6 mb-3">🌐 多语言支持</h3>
+                    <p>
+                      支持<strong>中文简体</strong>和<strong>English</strong>，
+                      适合全球内容创作者、SEO 专家、数字营销人员使用。
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <h3 className="text-xl font-bold text-white mb-3">🎯 Professional SEO Tool</h3>
+                    <p className="mb-4">
+                      Zuhio is a professional <strong>keyword density checker</strong> and 
+                      <strong> word count tool</strong> for SEO optimization. Improve your 
+                      Google rankings with our free online analyzer. No registration required.
+                    </p>
+                    <h3 className="text-xl font-bold text-white mb-3">📊 Real-time Analysis</h3>
+                    <p className="mb-4">
+                      Get instant <strong>keyword density</strong>, <strong>word count</strong>, 
+                      <strong>character count</strong>, and <strong>reading time</strong> statistics. 
+                      Supports both Chinese and English content analysis.
+                    </p>
+                    <h3 className="text-xl font-bold text-white mb-3">💡 Smart Recommendations</h3>
+                    <p>
+                      Based on SEO industry standards, we provide <strong>keyword density 
+                      recommendations</strong> to avoid keyword stuffing and make your content 
+                      more natural and search-engine friendly.
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white mb-3">🚀 Use Cases</h3>
+                    <ul className="space-y-2">
+                      <li>✓ Blog post SEO optimization</li>
+                      <li>✓ Website content keyword analysis</li>
+                      <li>✓ Academic paper word count</li>
+                      <li>✓ Social media content optimization</li>
+                      <li>✓ E-commerce product description</li>
+                      <li>✓ Email marketing content check</li>
+                    </ul>
+                    <h3 className="text-xl font-bold text-white mt-6 mb-3">🌐 Multi-language Support</h3>
+                    <p>
+                      Support for <strong>简体中文</strong> and <strong>English</strong>, 
+                      perfect for global content creators, SEO specialists, and digital marketers.
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+            
+            {/* SEO Keywords Cloud */}
+            <div className="mt-8 pt-8 border-t border-white/20">
+              <h3 className="text-lg font-bold text-white/60 text-center mb-4">
+                {language === 'zh' ? '热门 SEO 工具关键词' : 'Popular SEO Tool Keywords'}
+              </h3>
+              <div className="flex flex-wrap justify-center gap-2 text-xs text-white/50">
+                {language === 'zh' ? (
+                  <>
+                    <span>关键词密度检查器</span>
+                    <span>•</span>
+                    <span>词数统计工具</span>
+                    <span>•</span>
+                    <span>SEO 优化器</span>
+                    <span>•</span>
+                    <span>内容分析工具</span>
+                    <span>•</span>
+                    <span>免费 SEO 工具</span>
+                    <span>•</span>
+                    <span>关键词分析</span>
+                    <span>•</span>
+                    <span>网站优化</span>
+                    <span>•</span>
+                    <span>Google 排名优化</span>
+                    <span>•</span>
+                    <span>博客 SEO</span>
+                    <span>•</span>
+                    <span>内容营销工具</span>
+                  </>
+                ) : (
+                  <>
+                    <span>keyword density checker</span>
+                    <span>•</span>
+                    <span>word count tool</span>
+                    <span>•</span>
+                    <span>SEO analyzer</span>
+                    <span>•</span>
+                    <span>content optimizer</span>
+                    <span>•</span>
+                    <span>free SEO tool</span>
+                    <span>•</span>
+                    <span>keyword counter</span>
+                    <span>•</span>
+                    <span>website optimization</span>
+                    <span>•</span>
+                    <span>Google ranking</span>
+                    <span>•</span>
+                    <span>blog SEO</span>
+                    <span>•</span>
+                    <span>content marketing tool</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Footer */}
           <footer className="text-center text-white/60 mt-16 py-8 border-t border-white/20">
             <p className="mb-2">{t.footerText}</p>
-            <p className="text-sm">
+            <p className="text-sm mb-2">
               {t.footerCredit} | 
               <a href="https://github.com/lumaxiangshang/zuhio-keyword-count-checker" 
                  target="_blank" 
@@ -201,6 +347,11 @@ export default function Home() {
                  className="text-white/80 hover:text-white ml-2">
                 GitHub
               </a>
+            </p>
+            <p className="text-xs text-white/40 max-w-4xl mx-auto">
+              {language === 'zh' 
+                ? 'Zuhio 是免费的关键词密度检查器和词数统计工具，专为 SEO 优化设计。支持中文和英文内容分析，帮助内容创作者、SEO 专家和数字营销人员提升搜索排名。无需注册，立即使用。'
+                : 'Zuhio is a free keyword density checker and word count tool designed for SEO optimization. Supports Chinese and English content analysis, helping content creators, SEO specialists, and digital marketers improve search rankings. No registration required, use instantly.'}
             </p>
           </footer>
         </div>

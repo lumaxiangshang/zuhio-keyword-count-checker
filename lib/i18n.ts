@@ -10,8 +10,8 @@ export const translations = {
     github: 'GitHub',
     
     // Hero Section
-    heroTitle: '🔍 Zuhio Keyword Count Checker',
-    heroDescription: 'Free online tool to analyze word count, keyword density, and SEO optimization for your content',
+    heroTitle: '🔍 Zuhio Keyword Count Checker - Free SEO Tool',
+    heroDescription: 'Free online keyword density checker & word count tool for SEO optimization. Analyze your content and improve search rankings instantly.',
     
     // Text Input
     textareaPlaceholder: 'Paste or type your text here to start analyzing...  Try pasting an article, blog post, or any content you want to analyze. The tool will automatically count words, characters, sentences, and extract top keywords.',
@@ -93,8 +93,8 @@ export const translations = {
     github: 'GitHub',
     
     // Hero Section
-    heroTitle: '🔍 Zuhio 关键词密度分析工具',
-    heroDescription: '免费在线工具，分析词数、关键词密度，优化您的 SEO 内容',
+    heroTitle: '🔍 Zuhio 关键词密度分析工具 - 免费 SEO 工具',
+    heroDescription: '免费在线关键词密度检查器和词数统计工具，专为 SEO 优化设计。立即分析您的内容，提升搜索排名。',
     
     // Text Input
     textareaPlaceholder: '粘贴或输入您的文本开始分析... 可以粘贴文章、博客或任何需要分析的内容。工具会自动统计词数、字符数、句子数，并提取关键词。',

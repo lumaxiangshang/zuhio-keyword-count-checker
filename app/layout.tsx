@@ -5,9 +5,24 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Zuhio Keyword Count Checker - Free Word Counter & SEO Tool",
-  description: "Free online keyword count checker by Zuhio. Analyze word count, character count, keyword density, and SEO optimization for your content. No registration required.",
-  keywords: ["keyword counter", "word count", "keyword density", "SEO tool", "free keyword checker", "text analyzer", "zuhio", "content optimizer"],
+  title: "Zuhio Keyword Density Checker - Free SEO Tool | Word Count Analyzer",
+  description: "Free online keyword density checker & word count tool for SEO optimization. Analyze your content, improve Google rankings instantly. No registration required. Supports Chinese & English.",
+  keywords: [
+    "keyword density checker",
+    "word count tool", 
+    "SEO analyzer",
+    "content optimizer",
+    "free SEO tool",
+    "keyword counter",
+    "keyword density checker free",
+    "word count tool for SEO",
+    "analyze keyword density online",
+    "SEO content optimizer free",
+    "blog post keyword analyzer",
+    "content marketing SEO tool",
+    "text analyzer",
+    "zuhio"
+  ],
   authors: [{ name: "Zuhio" }],
   creator: "Zuhio",
   publisher: "Zuhio",
