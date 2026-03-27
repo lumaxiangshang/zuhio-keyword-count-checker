@@ -1,10 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Cloudflare Pages 适配配置
-  experimental: {
-    serverComponentsExternalPackages: [],
-  },
-  // 禁用图像优化（Cloudflare Pages 不支持）
+  // Cloudflare Pages 原生支持 Next.js
   images: {
     unoptimized: true,
   },
