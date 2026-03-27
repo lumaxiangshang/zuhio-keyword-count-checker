@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import PayPalCheckout from '@/components/PayPalCheckout';
 
 export default function PricingPage() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
@@ -21,6 +22,7 @@ export default function PricingPage() {
       ],
       cta: 'Start Free',
       highlighted: false,
+      planId: null,
     },
     {
       name: 'Pro',
@@ -35,8 +37,9 @@ export default function PricingPage() {
         { text: 'Keyword templates', included: true },
         { text: 'Priority support', included: true },
       ],
-      cta: 'Start 7-Day Free Trial',
+      cta: 'Subscribe with PayPal',
       highlighted: true,
+      planId: billingCycle === 'monthly' ? 'P-PRO-MONTHLY' : 'P-PRO-YEARLY',
     },
     {
       name: 'Business',
@@ -51,8 +54,9 @@ export default function PricingPage() {
         { text: 'White-label reports', included: true },
         { text: 'Dedicated support', included: true },
       ],
-      cta: 'Contact Sales',
+      cta: 'Subscribe with PayPal',
       highlighted: false,
+      planId: billingCycle === 'monthly' ? 'P-BIZ-MONTHLY' : 'P-BIZ-YEARLY',
     },
   ];
 
@@ -156,15 +160,38 @@ export default function PricingPage() {
                 ))}
               </ul>
 
-              <button
-                className={`w-full py-3 rounded-lg font-bold transition-colors ${
-                  plan.highlighted
-                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:opacity-90'
-                    : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                }`}
-              >
-                {plan.cta}
-              </button>
+              {plan.name === 'Free' ? (
+                <Link
+                  href="/"
+                  className={`block w-full py-3 text-center rounded-lg font-bold transition-colors ${
+                    plan.highlighted
+                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:opacity-90'
+                      : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                  }`}
+                >
+                  {plan.cta}
+                </Link>
+              ) : plan.name === 'Business' ? (
+                <a
+                  href="mailto:sales@zuhio.com"
+                  className={`block w-full py-3 text-center rounded-lg font-bold transition-colors ${
+                    plan.highlighted
+                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:opacity-90'
+                      : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                  }`}
+                >
+                  {plan.cta}
+                </a>
+              ) : (
+                <div>
+                  <PayPalCheckout
+                    planId={plan.planId || ''}
+                    planName={plan.name}
+                    price={plan.price}
+                    billingCycle={billingCycle}
+                  />
+                </div>
+              )}
             </div>
           ))}
         </div>
