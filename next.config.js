@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Cloudflare Pages 原生支持 Next.js
+  // Cloudflare Pages 静态导出
+  output: 'export',
+  distDir: 'out',
   images: {
     unoptimized: true,
   },
