@@ -28,15 +28,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build for Cloudflare Pages
-        run: npm run pages:build
+      - name: Build
+        run: npm run build
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy .vercel/output/static --project-name=zuhio-keyword-count-checker --branch=main
+          command: pages deploy .next --project-name=zuhio-keyword-count-checker --branch=main
 
       - name: Deployment URL
         run: |
