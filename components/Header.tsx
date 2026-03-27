@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import LanguageSwitcher from './LanguageSwitcher';
+import GoogleLogin from './GoogleLogin';
 import { Language } from '@/lib/i18n';
 
 interface HeaderProps {
@@ -36,6 +37,7 @@ export default function Header({ currentLanguage, onLanguageChange }: HeaderProp
                className="text-white/80 hover:text-white transition-colors">
               GitHub
             </a>
+            <GoogleLogin language={currentLanguage} />
             <LanguageSwitcher 
               currentLanguage={currentLanguage}
               onLanguageChange={onLanguageChange}
@@ -72,6 +74,9 @@ export default function Header({ currentLanguage, onLanguageChange }: HeaderProp
                className="block text-white/80 hover:text-white">
               GitHub
             </a>
+            <div className="pt-2 border-t border-white/20">
+              <GoogleLogin language={currentLanguage} />
+            </div>
             <div className="pt-2 border-t border-white/20">
               <LanguageSwitcher 
                 currentLanguage={currentLanguage}
