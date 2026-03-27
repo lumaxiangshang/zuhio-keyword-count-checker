@@ -1,8 +1,15 @@
 'use client';
 
 import { useState } from 'react';
+import LanguageSwitcher from './LanguageSwitcher';
+import { Language } from '@/lib/i18n';
 
-export default function Header() {
+interface HeaderProps {
+  currentLanguage: Language;
+  onLanguageChange: (lang: Language) => void;
+}
+
+export default function Header({ currentLanguage, onLanguageChange }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
@@ -16,7 +23,7 @@ export default function Header() {
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-8">
+          <div className="hidden md:flex items-center gap-6">
             <a href="#features" className="text-white/80 hover:text-white transition-colors">
               Features
             </a>
@@ -29,6 +36,10 @@ export default function Header() {
                className="text-white/80 hover:text-white transition-colors">
               GitHub
             </a>
+            <LanguageSwitcher 
+              currentLanguage={currentLanguage}
+              onLanguageChange={onLanguageChange}
+            />
           </div>
 
           {/* Mobile menu button */}
@@ -48,19 +59,25 @@ export default function Header() {
 
         {/* Mobile menu */}
         {isMenuOpen && (
-          <div className="md:hidden py-4 border-t border-white/20">
-            <a href="#features" className="block py-2 text-white/80 hover:text-white">
+          <div className="md:hidden py-4 border-t border-white/20 space-y-3">
+            <a href="#features" className="block text-white/80 hover:text-white">
               Features
             </a>
-            <a href="#how-it-works" className="block py-2 text-white/80 hover:text-white">
+            <a href="#how-it-works" className="block text-white/80 hover:text-white">
               How It Works
             </a>
             <a href="https://github.com/lumaxiangshang/zuhio-keyword-count-checker" 
                target="_blank" 
                rel="noopener noreferrer"
-               className="block py-2 text-white/80 hover:text-white">
+               className="block text-white/80 hover:text-white">
               GitHub
             </a>
+            <div className="pt-2 border-t border-white/20">
+              <LanguageSwitcher 
+                currentLanguage={currentLanguage}
+                onLanguageChange={onLanguageChange}
+              />
+            </div>
           </div>
         )}
       </nav>

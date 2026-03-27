@@ -5,12 +5,16 @@ import Header from '@/components/Header';
 import Features from '@/components/Features';
 import SEOGuide from '@/components/SEOGuide';
 import { analyzeText, calculateKeywordDensity } from '@/lib/analyzer';
+import { translations, Language } from '@/lib/i18n';
 
 export default function Home() {
   const [text, setText] = useState('');
   const [keyword, setKeyword] = useState('');
   const [results, setResults] = useState<any>(null);
   const [density, setDensity] = useState(0);
+  const [language, setLanguage] = useState<Language>('en');
+
+  const t = translations[language];
 
   useEffect(() => {
     if (text.trim()) {
@@ -26,26 +30,30 @@ export default function Home() {
   }, [text, keyword]);
 
   const getDensityStatus = (value: number) => {
-    if (value < 0.5) return { text: '⚠️ Too low', color: 'text-red-600' };
-    if (value > 4) return { text: '⚠️ Too high', color: 'text-red-600' };
-    return { text: '✅ Good', color: 'text-green-600' };
+    if (value < 0.5) return { text: t.densityTooLow, color: 'text-red-600' };
+    if (value > 4) return { text: t.densityTooHigh, color: 'text-red-600' };
+    return { text: t.densityGood, color: 'text-green-600' };
   };
 
   const densityStatus = getDensityStatus(density);
 
+  const handleLanguageChange = (lang: Language) => {
+    setLanguage(lang);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-purple-800">
-      <Header />
+      <Header currentLanguage={language} onLanguageChange={handleLanguageChange} />
       
       <main className="p-8">
         <div className="max-w-7xl mx-auto">
           {/* Hero Section */}
           <div className="text-center mb-12">
             <h1 className="text-5xl md:text-6xl font-bold text-white mb-4">
-              🔍 Zuhio Keyword Count Checker
+              {t.heroTitle}
             </h1>
             <p className="text-xl text-white/80 max-w-3xl mx-auto">
-              Free online tool to analyze word count, keyword density, and SEO optimization for your content
+              {t.heroDescription}
             </p>
           </div>
 
@@ -54,9 +62,7 @@ export default function Home() {
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Paste or type your text here to start analyzing...
-
-Try pasting an article, blog post, or any content you want to analyze. The tool will automatically count words, characters, sentences, and extract top keywords."
+              placeholder={t.textareaPlaceholder}
               className="w-full h-64 p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none text-lg resize-none transition-colors"
             />
             
@@ -66,14 +72,14 @@ Try pasting an article, blog post, or any content you want to analyze. The tool 
                 type="text"
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
-                placeholder="Enter keyword to analyze density (e.g., 'SEO', 'marketing')"
+                placeholder={t.keywordPlaceholder}
                 className="flex-1 p-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none transition-colors"
               />
               <button
                 onClick={() => setText('')}
                 className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors font-medium"
               >
-                Clear All
+                {t.clearAll}
               </button>
             </div>
           </div>
@@ -83,18 +89,18 @@ Try pasting an article, blog post, or any content you want to analyze. The tool 
             <>
               {/* Stats Cards */}
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-                <StatCard label="Words" value={results.wordCount.toLocaleString()} delay={0} />
-                <StatCard label="Characters" value={results.charCount.toLocaleString()} delay={100} />
-                <StatCard label="No Spaces" value={results.charCountNoSpaces.toLocaleString()} delay={200} />
-                <StatCard label="Sentences" value={results.sentenceCount.toLocaleString()} delay={300} />
-                <StatCard label="Paragraphs" value={results.paragraphCount.toLocaleString()} delay={400} />
-                <StatCard label="Read Time" value={`${results.readingTime} min`} delay={500} />
+                <StatCard label={t.words} value={results.wordCount.toLocaleString()} delay={0} />
+                <StatCard label={t.characters} value={results.charCount.toLocaleString()} delay={100} />
+                <StatCard label={t.charactersNoSpaces} value={results.charCountNoSpaces.toLocaleString()} delay={200} />
+                <StatCard label={t.sentences} value={results.sentenceCount.toLocaleString()} delay={300} />
+                <StatCard label={t.paragraphs} value={results.paragraphCount.toLocaleString()} delay={400} />
+                <StatCard label={t.readingTime} value={`${results.readingTime} ${t.minutes}`} delay={500} />
               </div>
 
               {/* Keyword Density */}
               {keyword && (
                 <div className="bg-white rounded-2xl shadow-xl p-6 mb-8">
-                  <h2 className="text-2xl font-bold mb-4 text-gray-800">Keyword Density</h2>
+                  <h2 className="text-2xl font-bold mb-4 text-gray-800">{t.keywordDensity}</h2>
                   <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
                     <div>
                       <span className="text-5xl font-bold text-purple-600">{density}%</span>
@@ -119,7 +125,7 @@ Try pasting an article, blog post, or any content you want to analyze. The tool 
               {/* Top Keywords Table */}
               <div className="bg-white rounded-2xl shadow-xl p-6 mb-8">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-bold text-gray-800">Top Keywords</h2>
+                  <h2 className="text-2xl font-bold text-gray-800">{t.topKeywords}</h2>
                   <span className="text-sm text-gray-500">
                     Showing top {results.topKeywords.length} keywords
                   </span>
@@ -130,8 +136,8 @@ Try pasting an article, blog post, or any content you want to analyze. The tool 
                       <tr className="border-b-2 border-gray-200">
                         <th className="text-left py-3 px-4 font-semibold text-gray-700">Rank</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700">Keyword</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Count</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Density</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">{t.count}</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">{t.density}</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
                       </tr>
                     </thead>
@@ -169,31 +175,31 @@ Try pasting an article, blog post, or any content you want to analyze. The tool 
           {!results && (
             <div className="text-center text-white/60 py-12">
               <div className="text-6xl mb-4">📝</div>
-              <p className="text-xl">Start typing or paste your text to see the analysis</p>
-              <p className="text-white/50 mt-2">Real-time updates as you type</p>
+              <p className="text-xl">{t.emptyStateTitle}</p>
+              <p className="text-white/50 mt-2">{t.emptyStateSubtitle}</p>
             </div>
           )}
 
           {/* Features Section */}
           <div className="mt-16">
-            <Features />
+            <Features language={language} />
           </div>
 
           {/* SEO Guide */}
           <div className="mt-8">
-            <SEOGuide />
+            <SEOGuide language={language} />
           </div>
 
           {/* Footer */}
           <footer className="text-center text-white/60 mt-16 py-8 border-t border-white/20">
-            <p className="mb-2">© 2026 Zuhio Keyword Count Checker. Free SEO Tool.</p>
+            <p className="mb-2">{t.footerText}</p>
             <p className="text-sm">
-              Built with Next.js + Tailwind CSS | 
+              {t.footerCredit} | 
               <a href="https://github.com/lumaxiangshang/zuhio-keyword-count-checker" 
                  target="_blank" 
                  rel="noopener noreferrer"
                  className="text-white/80 hover:text-white ml-2">
-                View on GitHub
+                GitHub
               </a>
             </p>
           </footer>

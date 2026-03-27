@@ -1,46 +1,52 @@
-export default function Features() {
+'use client';
+
+import { Language, translations } from '@/lib/i18n';
+
+interface FeaturesProps {
+  language: Language;
+}
+
+export default function Features({ language }: FeaturesProps) {
+  const t = translations[language];
+
   const features = [
     {
       icon: '📊',
-      title: 'Word Count',
-      description: 'Accurate word and character counting with real-time updates'
+      title: t.featureWordCount,
+      description: t.featureWordCountDesc,
     },
     {
       icon: '🔍',
-      title: 'Keyword Density',
-      description: 'Analyze keyword frequency and density for SEO optimization'
+      title: t.featureKeywordDensity,
+      description: t.featureKeywordDensityDesc,
     },
     {
       icon: '📈',
-      title: 'Top Keywords',
-      description: 'Extract most used keywords automatically with density percentage'
+      title: t.featureTopKeywords,
+      description: t.featureTopKeywordsDesc,
     },
     {
       icon: '⏱️',
-      title: 'Reading Time',
-      description: 'Estimate reading time based on word count and average speed'
+      title: t.featureReadingTime,
+      description: t.featureReadingTimeDesc,
     },
     {
       icon: '📱',
-      title: 'Responsive',
-      description: 'Works perfectly on desktop, tablet, and mobile devices'
+      title: t.featureResponsive,
+      description: t.featureResponsiveDesc,
     },
     {
       icon: '✅',
-      title: '100% Free',
-      description: 'No registration required, completely free to use'
-    }
+      title: t.featureFree,
+      description: t.featureFreeDesc,
+    },
   ];
 
   return (
     <section id="features" className="py-16 bg-white/5 backdrop-blur-sm rounded-2xl">
       <div className="text-center mb-12">
-        <h2 className="text-3xl font-bold text-white mb-4">
-          Powerful Features for Content Creators
-        </h2>
-        <p className="text-white/70 text-lg max-w-2xl mx-auto">
-          Everything you need to optimize your content for SEO and readability
-        </p>
+        <h2 className="text-3xl font-bold text-white mb-4">{t.featuresTitle}</h2>
+        <p className="text-white/70 text-lg max-w-2xl mx-auto">{t.featuresDesc}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
