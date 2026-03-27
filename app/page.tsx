@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import Features from '@/components/Features';
 import SEOGuide from '@/components/SEOGuide';
+import VisitorCounter from '@/components/VisitorCounter';
 import { analyzeText, calculateKeywordDensity } from '@/lib/analyzer';
 import { translations, Language } from '@/lib/i18n';
 
@@ -335,6 +336,9 @@ export default function Home() {
               </div>
             </div>
           </div>
+
+          {/* Visitor Counter */}
+          <VisitorCounter language={language} />
 
           {/* Footer */}
           <footer className="text-center text-white/60 mt-16 py-8 border-t border-white/20">
