@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import paypalConfig from '@/lib/paypal-config';
 
 interface PayPalOneTimePaymentProps {
   credits: number;
@@ -23,65 +24,30 @@ export default function PayPalOneTimePayment({
   const router = useRouter();
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [clientId, setClientId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const paypalRef = useRef<any>(null);
 
-  console.log('[PayPalOneTimePayment] Render - clientId:', clientId ? 'SET' : 'NOT SET', 'error:', error);
-
-  // 获取 PayPal Client ID
-  useEffect(() => {
-    console.log('[PayPalOneTimePayment] Fetching config...');
-    fetch('/api/paypal/config')
-      .then(res => {
-        console.log('[PayPalOneTimePayment] Config response status:', res.status);
-        return res.json();
-      })
-      .then(data => {
-        console.log('[PayPalOneTimePayment] Config data:', data);
-        if (data.clientId) {
-          console.log('[PayPalOneTimePayment] Client ID found, setting state');
-          setClientId(data.clientId);
-        } else {
-          console.error('[PayPalOneTimePayment] Client ID missing in response');
-          setError('PayPal Client ID not configured');
-        }
-      })
-      .catch(err => {
-        console.error('[PayPalOneTimePayment] Fetch error:', err);
-        setError('Failed to load PayPal configuration');
-      });
-  }, []);
-
   // 加载 PayPal SDK
   useEffect(() => {
-    console.log('[PayPalOneTimePayment] SDK load effect - clientId:', clientId ? 'SET' : 'NOT SET');
+    const clientId = paypalConfig.clientId;
     
     if (!clientId) {
-      console.log('[PayPalOneTimePayment] No clientId, skipping SDK load');
+      setError('PayPal Client ID not configured');
       return;
     }
 
     // 检查是否已加载
     if (window.paypal) {
-      console.log('[PayPalOneTimePayment] PayPal SDK already loaded');
       setLoaded(true);
       return;
     }
 
-    console.log('[PayPalOneTimePayment] Loading PayPal SDK...');
     // 动态加载 PayPal SDK
     const script = document.createElement('script');
     script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD&intent=capture`;
     script.async = true;
-    script.onload = () => {
-      console.log('[PayPalOneTimePayment] PayPal SDK loaded successfully');
-      setLoaded(true);
-    };
-    script.onerror = () => {
-      console.error('[PayPalOneTimePayment] PayPal SDK load error');
-      setError('Failed to load PayPal SDK');
-    };
+    script.onload = () => setLoaded(true);
+    script.onerror = () => setError('Failed to load PayPal SDK');
     document.body.appendChild(script);
 
     return () => {
@@ -89,25 +55,20 @@ export default function PayPalOneTimePayment({
         document.body.removeChild(script);
       }
     };
-  }, [clientId]);
+  }, []);
 
   // 渲染 PayPal 按钮
   useEffect(() => {
-    console.log('[PayPalOneTimePayment] Render buttons effect - loaded:', loaded, 'clientId:', clientId ? 'SET' : 'NOT SET');
-    
     if (!loaded || !window.paypal || !containerRef.current) {
-      console.log('[PayPalOneTimePayment] Skipping button render - conditions not met');
       return;
     }
 
     // 清理之前的按钮
     if (paypalRef.current) {
-      console.log('[PayPalOneTimePayment] Closing previous PayPal buttons');
       paypalRef.current.close();
     }
 
     try {
-      console.log('[PayPalOneTimePayment] Initializing PayPal buttons...');
       paypalRef.current = window.paypal.Buttons({
         style: {
           shape: 'rect',
@@ -116,7 +77,7 @@ export default function PayPalOneTimePayment({
           label: 'pay',
         },
         createOrder: async function(data: any, actions: any) {
-          console.log('[PayPalOneTimePayment] Creating order - credits:', credits, 'price:', price);
+          console.log('Creating order for credits:', credits, 'price:', price);
           
           const response = await fetch('/api/paypal/create-order', {
             method: 'POST',
@@ -128,18 +89,17 @@ export default function PayPalOneTimePayment({
           });
 
           const result = await response.json();
-          console.log('[PayPalOneTimePayment] Create order response:', result);
           
           if (result.success && result.orderId) {
-            console.log('[PayPalOneTimePayment] Order created:', result.orderId);
+            console.log('Order created:', result.orderId);
             return result.orderId;
           } else {
-            console.error('[PayPalOneTimePayment] Failed to create order:', result.error);
+            console.error('Failed to create order:', result.error);
             throw new Error(result.error || 'Failed to create order');
           }
         },
         onApprove: async function(data: any, actions: any) {
-          console.log('[PayPalOneTimePayment] Payment approved:', data);
+          console.log('Payment approved:', data);
           
           try {
             const response = await fetch('/api/paypal/capture-order', {
@@ -151,44 +111,40 @@ export default function PayPalOneTimePayment({
             });
 
             const result = await response.json();
-            console.log('[PayPalOneTimePayment] Capture response:', result);
             
             if (result.success) {
-              console.log('[PayPalOneTimePayment] Payment captured successfully');
+              console.log('Payment captured:', result);
               if (onSuccess) onSuccess();
               router.push(`/dashboard?payment=success&credits=${credits}`);
             } else {
-              console.error('[PayPalOneTimePayment] Capture failed:', result.error);
+              console.error('Capture failed:', result.error);
               setError(result.error || 'Payment failed. Please try again.');
             }
           } catch (err: any) {
-            console.error('[PayPalOneTimePayment] Capture error:', err);
+            console.error('Capture error:', err);
             setError('Network error. Please try again.');
           }
         },
         onError: function(err: any) {
-          console.error('[PayPalOneTimePayment] PayPal Error:', err);
+          console.error('PayPal Error:', err);
           setError('Payment failed. Please try again or use a different payment method.');
         },
       });
 
-      console.log('[PayPalOneTimePayment] Rendering PayPal buttons to container');
       paypalRef.current.render('#paypal-button-container-onetime');
     } catch (err: any) {
-      console.error('[PayPalOneTimePayment] Failed to initialize PayPal buttons:', err);
+      console.error('Failed to initialize PayPal buttons:', err);
       setError('Failed to initialize PayPal. Please refresh the page.');
     }
 
     return () => {
       if (paypalRef.current) {
-        console.log('[PayPalOneTimePayment] Cleaning up PayPal buttons');
         paypalRef.current.close();
       }
     };
   }, [loaded, credits, price, router, onSuccess]);
 
   if (error) {
-    console.log('[PayPalOneTimePayment] Rendering error state:', error);
     return (
       <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-center">
         <p className="text-red-800 text-sm">{error}</p>
@@ -202,8 +158,7 @@ export default function PayPalOneTimePayment({
     );
   }
 
-  if (!loaded || !clientId) {
-    console.log('[PayPalOneTimePayment] Rendering loading state - loaded:', loaded, 'clientId:', clientId ? 'SET' : 'NOT SET');
+  if (!loaded) {
     return (
       <div className="flex items-center justify-center p-4">
         <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
@@ -212,7 +167,6 @@ export default function PayPalOneTimePayment({
     );
   }
 
-  console.log('[PayPalOneTimePayment] Rendering PayPal container');
   return (
     <div className="w-full">
       <div ref={containerRef} id="paypal-button-container-onetime" className="w-full"></div>

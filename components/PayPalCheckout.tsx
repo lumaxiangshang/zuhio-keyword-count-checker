@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import paypalConfig from '@/lib/paypal-config';
 
 interface PayPalCheckoutProps {
   planId: string;
@@ -27,30 +28,15 @@ export default function PayPalCheckout({
   const router = useRouter();
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [clientId, setClientId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const paypalRef = useRef<any>(null);
 
-  // 获取 PayPal Client ID
-  useEffect(() => {
-    fetch('/api/paypal/config')
-      .then(res => res.json())
-      .then(data => {
-        if (data.clientId) {
-          setClientId(data.clientId);
-        } else {
-          setError('PayPal Client ID not configured');
-        }
-      })
-      .catch(err => {
-        console.error('Failed to load PayPal config:', err);
-        setError('Failed to load PayPal configuration');
-      });
-  }, []);
-
   // 加载 PayPal SDK
   useEffect(() => {
+    const clientId = paypalConfig.clientId;
+    
     if (!clientId) {
+      setError('PayPal Client ID not configured');
       return;
     }
 
@@ -73,7 +59,7 @@ export default function PayPalCheckout({
         document.body.removeChild(script);
       }
     };
-  }, [clientId]);
+  }, []);
 
   // 渲染 PayPal 按钮
   useEffect(() => {
