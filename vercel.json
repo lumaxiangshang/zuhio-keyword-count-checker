@@ -1,0 +1,8 @@
+{
+  "framework": "nextjs",
+  "installCommand": "yarn install --frozen-lockfile || npm install --legacy-peer-deps --prefer-offline --no-audit --no-fund",
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "devCommand": "npm run dev",
+  "regions": ["iad1"]
+}
