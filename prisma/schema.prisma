@@ -77,7 +77,8 @@ model Payment {
   credits             Int?
   
   // 订阅信息
-  subscription        Subscription?
+  subscriptionId      String?   @unique
+  subscription        Subscription? @relation(fields: [subscriptionId], references: [id])
   
   // 元数据
   metadata            Json?
