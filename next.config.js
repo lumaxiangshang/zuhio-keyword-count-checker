@@ -1,11 +1,21 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Cloudflare Pages 静态导出
-  output: 'export',
-  distDir: 'out',
+  // Vercel SSR 部署配置
+  output: 'standalone',
+  
+  // 图片优化
   images: {
-    unoptimized: true,
+    domains: ['assets.vercel.app'],
   },
+  
+  // React Strict Mode
+  reactStrictMode: true,
+  
+  // 优化构建
+  swcMinify: true,
+  
+  compress: true,
+  poweredByHeader: false,
 }
 
 module.exports = nextConfig
