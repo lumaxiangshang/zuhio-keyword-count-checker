@@ -1,13 +1,36 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import PayPalCheckout from '@/components/PayPalCheckout';
 
+interface PayPalPlans {
+  proMonthly: string;
+  proYearly: string;
+  businessMonthly: string;
+  businessYearly: string;
+}
+
 export default function PricingPage() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [plans, setPlans] = useState<PayPalPlans | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const plans = [
+  // 加载 PayPal 配置
+  useEffect(() => {
+    fetch('/api/paypal/config')
+      .then(res => res.json())
+      .then(data => {
+        setPlans(data.plans);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to load PayPal config:', err);
+        setLoading(false);
+      });
+  }, []);
+
+  const planData = [
     {
       name: 'Free',
       price: 0,
@@ -22,7 +45,7 @@ export default function PricingPage() {
       ],
       cta: 'Start Free',
       highlighted: false,
-      planId: null,
+      getPlanId: () => null,
     },
     {
       name: 'Pro',
@@ -39,7 +62,7 @@ export default function PricingPage() {
       ],
       cta: 'Subscribe with PayPal',
       highlighted: true,
-      planId: billingCycle === 'monthly' ? 'P-PRO-MONTHLY' : 'P-PRO-YEARLY',
+      getPlanId: () => plans ? (billingCycle === 'monthly' ? plans.proMonthly : plans.proYearly) : '',
     },
     {
       name: 'Business',
@@ -54,9 +77,9 @@ export default function PricingPage() {
         { text: 'White-label reports', included: true },
         { text: 'Dedicated support', included: true },
       ],
-      cta: 'Subscribe with PayPal',
+      cta: 'Contact Sales',
       highlighted: false,
-      planId: billingCycle === 'monthly' ? 'P-BIZ-MONTHLY' : 'P-BIZ-YEARLY',
+      getPlanId: () => plans ? (billingCycle === 'monthly' ? plans.businessMonthly : plans.businessYearly) : '',
     },
   ];
 
@@ -75,6 +98,7 @@ export default function PricingPage() {
             <nav className="flex items-center gap-6">
               <a href="/" className="text-sm text-gray-600 hover:text-gray-800">Home</a>
               <a href="/dashboard" className="text-sm text-gray-600 hover:text-gray-800">Dashboard</a>
+              <a href="/credits" className="text-sm text-gray-600 hover:text-gray-800">Buy Credits</a>
               <Link href="/dashboard" className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700">
                 Sign In
               </Link>
@@ -114,7 +138,7 @@ export default function PricingPage() {
 
         {/* Pricing Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-          {plans.map((plan) => (
+          {planData.map((plan) => (
             <div
               key={plan.name}
               className={`relative bg-white rounded-2xl p-8 ${
@@ -184,12 +208,18 @@ export default function PricingPage() {
                 </a>
               ) : (
                 <div>
-                  <PayPalCheckout
-                    planId={plan.planId || ''}
-                    planName={plan.name}
-                    price={plan.price}
-                    billingCycle={billingCycle}
-                  />
+                  {loading ? (
+                    <div className="flex items-center justify-center p-4">
+                      <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  ) : (
+                    <PayPalCheckout
+                      planId={plan.getPlanId() || ''}
+                      planName={plan.name}
+                      price={plan.price}
+                      billingCycle={billingCycle}
+                    />
+                  )}
                 </div>
               )}
             </div>
@@ -234,6 +264,7 @@ export default function PricingPage() {
               <ul className="space-y-2 text-gray-400 text-sm">
                 <li><a href="/" className="hover:text-white">Features</a></li>
                 <li><a href="/pricing" className="hover:text-white">Pricing</a></li>
+                <li><a href="/credits" className="hover:text-white">Buy Credits</a></li>
                 <li><a href="/dashboard" className="hover:text-white">Dashboard</a></li>
               </ul>
             </div>
