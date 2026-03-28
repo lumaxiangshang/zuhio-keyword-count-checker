@@ -3,32 +3,15 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import PayPalCheckout from '@/components/PayPalCheckout';
-
-interface PayPalPlans {
-  proMonthly: string;
-  proYearly: string;
-  businessMonthly: string;
-  businessYearly: string;
-}
+import paypalConfig from '@/lib/paypal-config';
 
 export default function PricingPage() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
-  const [plans, setPlans] = useState<PayPalPlans | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  // 加载 PayPal 配置
-  useEffect(() => {
-    fetch('/api/paypal/config')
-      .then(res => res.json())
-      .then(data => {
-        setPlans(data.plans);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Failed to load PayPal config:', err);
-        setLoading(false);
-      });
-  }, []);
+  // 使用硬编码的配置（静态导出需要）
+  const plans = paypalConfig.plans;
+  // 不需要加载状态，配置已经硬编码
+  const loading = false;
 
   const planData = [
     {
