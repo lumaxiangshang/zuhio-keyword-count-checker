@@ -1,0 +1,163 @@
+// Prisma Schema for Zuhio Keyword Count Checker
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 用户模型
+model User {
+  id                    String    @id @default(cuid())
+  email                 String    @unique
+  name                  String?
+  image                 String?
+  emailVerified         DateTime?
+  
+  // 积分系统
+  credits               Int       @default(0)
+  
+  // 订阅信息
+  subscriptionPlan      SubscriptionPlan @default(FREE)
+  subscriptionStatus    SubscriptionStatus @default(INACTIVE)
+  subscriptionEndDate   DateTime?
+  paypalSubscriptionId  String?   @unique
+  
+  // 关系
+  payments              Payment[]
+  subscriptions         Subscription[]
+  
+  // 时间戳
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  
+  // 索引
+  @@index([email])
+  @@index([subscriptionStatus])
+}
+
+// 订阅计划类型
+enum SubscriptionPlan {
+  FREE
+  PRO
+  BUSINESS
+}
+
+// 订阅状态
+enum SubscriptionStatus {
+  INACTIVE
+  ACTIVE
+  CANCELLED
+  EXPIRED
+}
+
+// 支付记录
+model Payment {
+  id                  String        @id @default(cuid())
+  userId              String
+  user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // 金额
+  amount              Float
+  currency            String        @default("USD")
+  
+  // PayPal 信息
+  paypalOrderId       String?       @unique
+  paypalCaptureId     String?
+  paypalSubscriptionId String?
+  
+  // 支付类型
+  paymentType         PaymentType
+  status              PaymentStatus @default(PENDING)
+  
+  // 积分（一次性支付）
+  credits             Int?
+  
+  // 订阅信息
+  subscription        Subscription?
+  
+  // 元数据
+  metadata            Json?
+  
+  // 时间戳
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  
+  // 索引
+  @@index([userId])
+  @@index([paypalOrderId])
+  @@index([status])
+  @@index([paymentType])
+}
+
+enum PaymentType {
+  ONE_TIME
+  SUBSCRIPTION
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+// 订阅记录
+model Subscription {
+  id                  String        @id @default(cuid())
+  userId              String
+  user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // PayPal 订阅 ID
+  paypalSubscriptionId String       @unique
+  
+  // 计划信息
+  planId              String
+  planName            String
+  billingCycle        BillingCycle
+  amount              Float
+  currency            String        @default("USD")
+  
+  // 状态
+  status              SubscriptionStatus @default(ACTIVE)
+  
+  // 时间
+  currentPeriodStart  DateTime
+  currentPeriodEnd    DateTime
+  cancelledAt         DateTime?
+  
+  // 支付历史
+  payments            Payment[]
+  
+  // 时间戳
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  
+  // 索引
+  @@index([userId])
+  @@index([paypalSubscriptionId])
+  @@index([status])
+}
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+}
+
+// Webhook 日志
+model WebhookLog {
+  id                String    @id @default(cuid())
+  eventType         String
+  webhookId         String?
+  transmissionId    String?
+  payload           Json
+  processed         Boolean   @default(false)
+  error             String?
+  createdAt         DateTime  @default(now())
+  
+  @@index([eventType])
+  @@index([processed])
+}

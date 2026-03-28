@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
-// PayPal API 基础 URL
 const PAYPAL_BASE_URL = process.env.PAYPAL_API_URL || 'https://api-m.sandbox.paypal.com';
 
-// 获取 PayPal Access Token
 async function getAccessToken() {
   const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
   const secret = process.env.PAYPAL_SECRET;
@@ -30,14 +29,25 @@ async function getAccessToken() {
   return data.access_token;
 }
 
-// 创建一次性支付订单
 export async function POST(request: NextRequest) {
+  const reqId = crypto.randomUUID();
+  console.log(`[${reqId}] Create Order - Request received`);
+
   try {
-    const { credits, price, userId, returnUrl, cancelUrl } = await request.json();
+    const { credits, price, userId } = await request.json();
+
+    if (!credits || !price || !userId) {
+      return NextResponse.json(
+        { success: false, error: 'Missing required fields: credits, price, userId' },
+        { status: 400 }
+      );
+    }
+
+    console.log(`[${reqId}] Creating order for user ${userId}, credits: ${credits}, price: $${price}`);
 
     const accessToken = await getAccessToken();
 
-    // 创建订单
+    // 创建 PayPal 订单
     const response = await fetch(`${PAYPAL_BASE_URL}/v2/checkout/orders`, {
       method: 'POST',
       headers: {
@@ -50,6 +60,7 @@ export async function POST(request: NextRequest) {
         purchase_units: [
           {
             reference_id: `credits-${userId}-${Date.now()}`,
+            custom_id: userId,
             amount: {
               currency_code: 'USD',
               value: price.toString(),
@@ -78,31 +89,48 @@ export async function POST(request: NextRequest) {
           brand_name: 'Zuhio',
           landing_page: 'NO_PREFERENCE',
           user_action: 'PAY_NOW',
-          return_url: returnUrl || `${process.env.NEXT_PUBLIC_BASE_URL}/payment/success`,
-          cancel_url: cancelUrl || `${process.env.NEXT_PUBLIC_BASE_URL}/payment/cancelled`,
+          return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/success`,
+          cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/cancelled`,
         },
       }),
     });
 
     if (!response.ok) {
       const error = await response.text();
+      console.error(`[${reqId}] PayPal API error:`, error);
       throw new Error(`Failed to create order: ${error}`);
     }
 
     const order = await response.json();
+    console.log(`[${reqId}] PayPal order created:`, order.id);
 
-    // 获取审批 URL
-    const approvalUrl = order.links?.find((link: any) => link.rel === 'approve')?.href;
+    // 在数据库中创建支付记录
+    const payment = await prisma.payment.create({
+      data: {
+        userId,
+        amount: parseFloat(price),
+        currency: 'USD',
+        paypalOrderId: order.id,
+        paymentType: 'ONE_TIME',
+        status: 'PENDING',
+        credits,
+        metadata: {
+          order,
+        },
+      },
+    });
+
+    console.log(`[${reqId}] Payment record created in database:`, payment.id);
 
     return NextResponse.json({
       success: true,
       orderId: order.id,
-      approvalUrl,
-      order,
+      approvalUrl: order.links?.find((link: any) => link.rel === 'approve')?.href,
+      paymentId: payment.id,
     });
 
   } catch (error: any) {
-    console.error('Create Order Error:', error);
+    console.error(`[${reqId}] Create Order Error:`, error);
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 500 }

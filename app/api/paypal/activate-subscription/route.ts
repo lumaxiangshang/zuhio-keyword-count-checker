@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
-// PayPal API 基础 URL
 const PAYPAL_BASE_URL = process.env.PAYPAL_API_URL || 'https://api-m.sandbox.paypal.com';
 
-// 获取 PayPal Access Token
 async function getAccessToken() {
   const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
   const secret = process.env.PAYPAL_SECRET;
@@ -30,7 +29,6 @@ async function getAccessToken() {
   return data.access_token;
 }
 
-// 获取订阅详情
 async function getSubscriptionDetails(accessToken: string, subscriptionId: string) {
   const response = await fetch(`${PAYPAL_BASE_URL}/v1/billing/subscriptions/${subscriptionId}`, {
     headers: {
@@ -46,8 +44,10 @@ async function getSubscriptionDetails(accessToken: string, subscriptionId: strin
   return await response.json();
 }
 
-// 激活订阅
 export async function POST(request: NextRequest) {
+  const reqId = crypto.randomUUID();
+  console.log(`[${reqId}] Activate Subscription - Request received`);
+
   try {
     const { subscriptionID, planId } = await request.json();
 
@@ -58,14 +58,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const accessToken = await getAccessToken();
+    console.log(`[${reqId}] Activating subscription:`, subscriptionID);
 
-    // 获取订阅详情
+    const accessToken = await getAccessToken();
     const subscriptionDetails = await getSubscriptionDetails(accessToken, subscriptionID);
 
-    // 验证订阅状态
     const status = subscriptionDetails.status;
-    
+    console.log(`[${reqId}] Subscription status:`, status);
+
     if (status === 'APPROVED' || status === 'ACTIVE') {
       // 提取订阅信息
       const plan = subscriptionDetails.plan;
@@ -74,39 +74,67 @@ export async function POST(request: NextRequest) {
       const price = billingCycle?.pricing_scheme?.fixed_price?.value;
 
       // 确定套餐类型
-      let planType = 'pro';
+      let planType = 'PRO';
+      let planName = 'Pro';
       if (planId?.includes('BUSINESS')) {
-        planType = 'business';
+        planType = 'BUSINESS';
+        planName = 'Business';
       }
 
-      // TODO: 在这里更新数据库，激活用户订阅
-      // await db.user.update({
-      //   where: { id: userId },
-      //   data: {
-      //     subscriptionStatus: 'active',
-      //     subscriptionPlan: planType,
-      //     subscriptionCycle: interval === 'YEAR' ? 'yearly' : 'monthly',
-      //     paypalSubscriptionId: subscriptionID,
-      //     subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 天后
-      //   },
-      // });
+      const billingCycleType = interval === 'YEAR' ? 'YEARLY' : 'MONTHLY';
 
-      console.log('✅ Subscription activated:', {
-        subscriptionId: subscriptionID,
-        planId,
-        planType,
-        status,
-        price,
-        interval,
+      // 计算订阅周期结束时间
+      const now = new Date();
+      const currentPeriodEnd = new Date(now);
+      if (interval === 'YEAR') {
+        currentPeriodEnd.setFullYear(currentPeriodEnd.getFullYear() + 1);
+      } else {
+        currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 1);
+      }
+
+      // 使用事务创建订阅和更新用户
+      const [subscription, updatedUser] = await prisma.$transaction([
+        // 创建订阅记录
+        prisma.subscription.create({
+          data: {
+            userId: subscriptionDetails.subscriber?.email_address || 'unknown',
+            paypalSubscriptionId: subscriptionID,
+            planId,
+            planName,
+            billingCycle: billingCycleType,
+            amount: parseFloat(price || '0'),
+            currency: 'USD',
+            status: 'ACTIVE',
+            currentPeriodStart: now,
+            currentPeriodEnd,
+          },
+        }),
+        // 更新用户订阅状态
+        prisma.user.update({
+          where: { email: subscriptionDetails.subscriber?.email_address || 'unknown' },
+          data: {
+            subscriptionPlan: planType as any,
+            subscriptionStatus: 'ACTIVE',
+            subscriptionEndDate: currentPeriodEnd,
+            paypalSubscriptionId: subscriptionID,
+          },
+        }),
+      ]);
+
+      console.log(`[${reqId}] Subscription activated:`, {
+        subscriptionId: subscription.id,
+        userId: updatedUser.id,
+        plan: planName,
+        billingCycle: billingCycleType,
       });
 
       return NextResponse.json({
         success: true,
-        message: 'Subscription activated successfully',
-        subscriptionId: subscriptionID,
-        plan: planType,
-        billingCycle: interval === 'YEAR' ? 'yearly' : 'monthly',
-        status,
+        subscriptionId: subscription.id,
+        plan: planType.toLowerCase(),
+        billingCycle: billingCycleType.toLowerCase(),
+        status: 'ACTIVE',
+        currentPeriodEnd: currentPeriodEnd.toISOString(),
       });
     } else {
       return NextResponse.json(
@@ -116,7 +144,7 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error: any) {
-    console.error('Subscription Activation Error:', error);
+    console.error(`[${reqId}] Activate Subscription Error:`, error);
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 500 }

@@ -7,17 +7,25 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "postinstall": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "db:seed": "ts-node scripts/seed-db.ts",
+    "db:test": "ts-node scripts/test-db.ts",
     "paypal:create-products": "ts-node scripts/create-paypal-products.ts",
     "paypal:test-api": "ts-node scripts/test-paypal-api.ts"
   },
   "dependencies": {
+    "@prisma/client": "^7.6.0",
     "firebase": "^12.11.0",
     "next": "14.2.5",
+    "prisma": "^7.6.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "@types/node": "^20.11.0",
+    "@types/node": "^20.19.37",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "autoprefixer": "^10.4.17",
