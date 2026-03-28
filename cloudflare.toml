@@ -1,7 +1,14 @@
 # Cloudflare Pages 构建配置
+# 注意：这个文件不会被 Cloudflare 使用，仅供参考
+# 实际配置在 Cloudflare Dashboard 中设置
+
 [build]
+# 构建命令 - 在 Cloudflare Dashboard 中配置
 command = "npm run build"
+
+# 输出目录 - 在 Cloudflare Dashboard 中配置  
 output = "out"
 
+# 环境变量 - 在 Cloudflare Dashboard 中配置
 [vars]
 NODE_ENV = "production"
