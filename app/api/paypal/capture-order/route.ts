@@ -66,29 +66,29 @@ export async function POST(request: NextRequest) {
     const payments = purchaseUnit?.payments?.captures?.[0];
 
     if (paymentStatus === 'COMPLETED') {
-      // TODO: 在这里更新数据库，给用户添加积分
-      // await db.user.update({
-      //   where: { id: userId },
-      //   data: {
-      //     credits: { increment: credits },
-      //     payments: {
-      //       create: {
-      //         amount: parseFloat(payments.amount.value),
-      //         currency: payments.amount.currency_code,
-      //         paypalOrderId: orderId,
-      //         status: 'completed',
-      //       },
-      //     },
-      //   },
-      // });
+      // 导入数据库（生产环境替换为真实数据库）
+      const { db } = await import('@/lib/database');
 
-      console.log('✅ Payment completed:', {
-        orderId,
-        userId,
-        amount: payments?.amount?.value,
-        currency: payments?.amount?.currency_code,
-        captureId: payments?.id,
-      });
+      // 查找支付记录
+      const payment = await db.payment.findByPaypalOrderId(orderId);
+      
+      if (payment && payment.userId) {
+        // 更新支付状态
+        await db.payment.update(payment.id, {
+          status: 'completed',
+          paypalCaptureId: payments?.id,
+        });
+
+        // 添加积分到用户账户
+        await db.user.addCredits(payment.userId, payment.credits || 0);
+
+        console.log('✅ Payment completed and credits added:', {
+          orderId,
+          userId: payment.userId,
+          credits: payment.credits,
+          captureId: payments?.id,
+        });
+      }
 
       return NextResponse.json({
         success: true,
@@ -96,6 +96,7 @@ export async function POST(request: NextRequest) {
         captureId: payments?.id,
         amount: payments?.amount?.value,
         currency: payments?.amount?.currency_code,
+        credits: payment?.credits,
       });
     } else {
       return NextResponse.json({
