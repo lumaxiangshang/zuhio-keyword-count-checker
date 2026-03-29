@@ -1,7 +1,7 @@
 {
   "framework": "nextjs",
-  "installCommand": "npm install",
-  "buildCommand": "npx prisma generate && npm run build",
+  "installCommand": "pnpm install",
+  "buildCommand": "npx prisma generate && pnpm run build",
   "outputDirectory": ".next",
   "regions": ["iad1"]
 }
