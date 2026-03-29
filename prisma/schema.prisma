@@ -1,4 +1,4 @@
-// Prisma Schema for Zuhio Keyword Count Checker
+// Prisma Schema for Zuhio - Subscription Only Model
 
 generator client {
   provider = "prisma-client-js"
@@ -17,17 +17,17 @@ model User {
   image                 String?
   emailVerified         DateTime?
   
-  // 积分系统
-  credits               Int       @default(0)
-  
   // 订阅信息
   subscriptionPlan      SubscriptionPlan @default(FREE)
   subscriptionStatus    SubscriptionStatus @default(INACTIVE)
   subscriptionEndDate   DateTime?
   paypalSubscriptionId  String?   @unique
   
+  // 使用统计
+  todayUsage            Int       @default(0)
+  lastUsageDate         DateTime?
+  
   // 关系
-  payments              Payment[]
   subscriptions         Subscription[]
   
   // 时间戳
@@ -54,58 +54,6 @@ enum SubscriptionStatus {
   EXPIRED
 }
 
-// 支付记录
-model Payment {
-  id                  String        @id @default(cuid())
-  userId              String
-  user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  // 金额
-  amount              Float
-  currency            String        @default("USD")
-  
-  // PayPal 信息
-  paypalOrderId       String?       @unique
-  paypalCaptureId     String?
-  paypalSubscriptionId String?
-  
-  // 支付类型
-  paymentType         PaymentType
-  status              PaymentStatus @default(PENDING)
-  
-  // 积分（一次性支付）
-  credits             Int?
-  
-  // 订阅信息
-  subscriptionId      String?   @unique
-  subscription        Subscription? @relation(fields: [subscriptionId], references: [id])
-  
-  // 元数据
-  metadata            Json?
-  
-  // 时间戳
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
-  
-  // 索引
-  @@index([userId])
-  @@index([paypalOrderId])
-  @@index([status])
-  @@index([paymentType])
-}
-
-enum PaymentType {
-  ONE_TIME
-  SUBSCRIPTION
-}
-
-enum PaymentStatus {
-  PENDING
-  COMPLETED
-  FAILED
-  REFUNDED
-}
-
 // 订阅记录
 model Subscription {
   id                  String        @id @default(cuid())
@@ -130,9 +78,6 @@ model Subscription {
   currentPeriodEnd    DateTime
   cancelledAt         DateTime?
   
-  // 支付历史
-  payments            Payment[]
-  
   // 时间戳
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
@@ -148,17 +93,16 @@ enum BillingCycle {
   YEARLY
 }
 
-// Webhook 日志
-model WebhookLog {
+// 使用记录（用于统计）
+model UsageLog {
   id                String    @id @default(cuid())
-  eventType         String
-  webhookId         String?
-  transmissionId    String?
-  payload           Json
-  processed         Boolean   @default(false)
-  error             String?
+  userId            String?
+  userEmail         String
+  action            String    // "analysis", "export", etc.
+  metadata          Json?
   createdAt         DateTime  @default(now())
   
-  @@index([eventType])
-  @@index([processed])
+  @@index([userId])
+  @@index([userEmail])
+  @@index([createdAt])
 }

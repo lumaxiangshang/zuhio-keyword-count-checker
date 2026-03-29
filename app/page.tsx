@@ -17,14 +17,47 @@ export default function Home() {
   const [language, setLanguage] = useState<Language>('en');
 
   const t = translations[language];
+  const [usageCount, setUsageCount] = useState(0);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const DAILY_LIMIT = 3;
+
+  useEffect(() => {
+    // 从 localStorage 获取今日使用次数
+    const today = new Date().toDateString();
+    const stored = localStorage.getItem('zuhio_usage');
+    if (stored) {
+      const { date, count } = JSON.parse(stored);
+      if (date === today) {
+        setUsageCount(count);
+      } else {
+        // 新的一天，重置计数
+        localStorage.setItem('zuhio_usage', JSON.stringify({ date: today, count: 0 }));
+        setUsageCount(0);
+      }
+    } else {
+      localStorage.setItem('zuhio_usage', JSON.stringify({ date: today, count: 0 }));
+    }
+  }, []);
 
   useEffect(() => {
     if (text.trim()) {
+      // 检查使用限制
+      if (usageCount >= DAILY_LIMIT) {
+        setShowUpgradeModal(true);
+        return;
+      }
+
       const analysis = analyzeText(text);
       setResults(analysis);
       if (keyword.trim()) {
         setDensity(calculateKeywordDensity(text, keyword));
       }
+
+      // 增加使用次数
+      const today = new Date().toDateString();
+      const newCount = usageCount + 1;
+      localStorage.setItem('zuhio_usage', JSON.stringify({ date: today, count: newCount }));
+      setUsageCount(newCount);
     } else {
       setResults(null);
       setDensity(0);
