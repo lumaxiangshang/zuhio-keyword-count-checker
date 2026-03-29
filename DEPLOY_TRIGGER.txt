@@ -1,0 +1,6 @@
+# 部署触发文件
+# 用于强制 Vercel 部署最新代码
+
+Last Updated: 2026-03-30 00:35 GMT+8
+Commit: bf479ed
+Status: Forcing redeploy
