@@ -69,11 +69,22 @@ export async function POST(request: NextRequest) {
     const captureData = await response.json();
     console.log(`[${reqId}] Order captured:`, captureData.id);
 
+    // 通过 orderId 查找支付记录
+    let payment;
+    try {
+      payment = await prisma.payment.findUnique({
+        where: { paypalOrderId: orderId },
+        include: { user: true },
+      });
+    } catch (findError: any) {
+      console.error(`[${reqId}] Find payment error:`, findError.message);
+    }
+
     // 更新支付记录（如果存在）
-    if (paymentId) {
+    if (payment) {
       try {
-        const payment = await prisma.payment.update({
-          where: { id: paymentId },
+        await prisma.payment.update({
+          where: { id: payment.id },
           data: {
             status: 'COMPLETED',
             paypalCaptureId: captureData.id,
@@ -108,11 +119,13 @@ export async function POST(request: NextRequest) {
         console.error(`[${reqId}] Database error:`, dbError.message);
         // 继续返回成功，不阻断流程
       }
+    } else {
+      console.log(`[${reqId}] No payment record found for order: ${orderId}`);
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Payment successful',
+      message: 'Payment successful (no database record)',
       captureData,
     });
 
