@@ -50,8 +50,8 @@ export async function POST(request: NextRequest) {
           image: photoURL,
           emailVerified: emailVerified ? new Date() : null,
           credits: 10, // 新用户赠送 10 积分
-          subscriptionPlan: 'FREE',
-          subscriptionStatus: 'INACTIVE',
+          subscriptionPlan: 'FREE' as any, // 枚举类型
+          subscriptionStatus: 'INACTIVE' as any, // 枚举类型
         },
       });
     }

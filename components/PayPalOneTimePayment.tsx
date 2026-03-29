@@ -84,20 +84,21 @@ export default function PayPalOneTimePayment({
             const { auth } = await import('@/lib/firebase');
             const currentUser = auth.currentUser;
             
+            // 优先使用 userEmail，API 会通过 email 查找数据库用户 ID
             const response = await fetch('/api/paypal/create-order', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 credits,
                 price: price.toString(),
-                userId: currentUser?.uid,
-                userEmail: currentUser?.email,
+                userEmail: currentUser?.email, // 使用 email 查找数据库用户
               }),
             });
 
             const result = await response.json();
             
             if (!response.ok) {
+              console.error('[PayPalOneTimePayment] API Error:', result);
               throw new Error(result.error || 'Failed to create order');
             }
             

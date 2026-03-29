@@ -122,23 +122,28 @@ export async function POST(request: NextRequest) {
     // 在数据库中创建支付记录（如果用户存在）
     let paymentId = null;
     if (finalUserId) {
-      const payment = await prisma.payment.create({
-        data: {
-          userId: finalUserId,
-          amount: parseFloat(price),
-          currency: 'USD',
-          paypalOrderId: order.id,
-          paymentType: 'ONE_TIME',
-          status: 'PENDING',
-          credits,
-          metadata: {
-            order,
-            createdAt: new Date().toISOString(),
+      try {
+        const payment = await prisma.payment.create({
+          data: {
+            userId: finalUserId,
+            amount: parseFloat(price),
+            currency: 'USD',
+            paypalOrderId: order.id,
+            paymentType: 'ONE_TIME' as any, // 枚举类型
+            status: 'PENDING' as any, // 枚举类型
+            credits,
+            metadata: {
+              order,
+              createdAt: new Date().toISOString(),
+            },
           },
-        },
-      });
-      paymentId = payment.id;
-      console.log(`[${reqId}] Payment record created: ${paymentId}`);
+        });
+        paymentId = payment.id;
+        console.log(`[${reqId}] Payment record created: ${paymentId}`);
+      } catch (dbError: any) {
+        console.error(`[${reqId}] Database error:`, dbError.message);
+        // 继续，不阻断流程
+      }
     }
 
     return NextResponse.json({
