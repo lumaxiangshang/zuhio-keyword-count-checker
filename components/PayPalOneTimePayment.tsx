@@ -79,7 +79,7 @@ export default function PayPalOneTimePayment({
         createOrder: async function(data: any, actions: any) {
           console.log('Creating order for credits:', credits, 'price:', price);
           
-          const response = await fetch('/api/paypal/create-order', {
+          const response = await fetch('/api/paypal/create-order-lite', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
