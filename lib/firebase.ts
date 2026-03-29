@@ -49,5 +49,6 @@ export const onAuthChange = (callback: (user: User | null) => void) => {
   return onAuthStateChanged(auth, callback);
 };
 
-export { auth };
+// 导出 googleProvider 和 auth
+export { auth, googleProvider };
 export default app;
