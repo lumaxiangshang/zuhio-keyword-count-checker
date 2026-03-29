@@ -40,6 +40,8 @@ export default function GoogleLogin({ onLoginSuccess }: GoogleLoginProps) {
     setError(null);
 
     try {
+      console.log('[GoogleLogin] Syncing user to database:', firebaseUser.email);
+      
       const response = await fetch('/api/auth/callback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -52,21 +54,23 @@ export default function GoogleLogin({ onLoginSuccess }: GoogleLoginProps) {
         }),
       });
 
+      console.log('[GoogleLogin] API response status:', response.status);
       const data = await response.json();
+      console.log('[GoogleLogin] API response data:', data);
 
       if (data.success) {
         setDbUser(data.user);
+        console.log('[GoogleLogin] User synced successfully:', data.user);
         if (onLoginSuccess) {
           onLoginSuccess(data.user);
         }
-        console.log('User synced to database:', data.user);
       } else {
-        console.error('Failed to sync user:', data.error);
-        setError(data.error);
+        console.error('[GoogleLogin] Failed to sync user:', data.error);
+        setError(data.error || 'Failed to sync user');
       }
     } catch (err: any) {
-      console.error('Sync error:', err);
-      setError('Failed to sync user data');
+      console.error('[GoogleLogin] Sync error:', err);
+      setError('Failed to sync user data: ' + err.message);
     } finally {
       setSyncing(false);
     }

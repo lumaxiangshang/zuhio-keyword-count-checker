@@ -12,9 +12,13 @@ export async function POST(request: NextRequest) {
   console.log(`[${reqId}] Auth callback - Request received`);
 
   try {
-    const { uid, email, displayName, photoURL, emailVerified } = await request.json();
+    const body = await request.json();
+    console.log(`[${reqId}] Request body:`, body);
+    
+    const { uid, email, displayName, photoURL, emailVerified } = body;
 
     if (!email) {
+      console.error(`[${reqId}] Email is required`);
       return NextResponse.json(
         { success: false, error: 'Email is required' },
         { status: 400 }
