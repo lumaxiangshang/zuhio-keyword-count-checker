@@ -31,6 +31,3 @@ export default function PaymentCancelledPage() {
     </div>
   );
 }
-
-// 强制动态渲染
-export const dynamic = 'force-dynamic';
