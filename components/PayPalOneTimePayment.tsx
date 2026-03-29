@@ -77,25 +77,40 @@ export default function PayPalOneTimePayment({
           label: 'pay',
         },
         createOrder: async function(data: any, actions: any) {
-          console.log('Creating order for credits:', credits, 'price:', price);
+          console.log('[PayPalOneTimePayment] Creating order:', credits, price);
           
-          const response = await fetch('/api/paypal/create-order-lite', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              credits,
-              price: price.toString(),
-            }),
-          });
+          try {
+            // 使用 cache busting 避免缓存
+            const response = await fetch('/api/paypal/create-order-lite?t=' + Date.now(), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                credits,
+                price: price.toString(),
+              }),
+            });
 
-          const result = await response.json();
-          
-          if (result.success && result.orderId) {
-            console.log('Order created:', result.orderId);
-            return result.orderId;
-          } else {
-            console.error('Failed to create order:', result.error);
-            throw new Error(result.error || 'Failed to create order');
+            const text = await response.text();
+            console.log('[PayPalOneTimePayment] Raw response:', text);
+            
+            let result;
+            try {
+              result = JSON.parse(text);
+            } catch (e) {
+              console.error('[PayPalOneTimePayment] JSON parse error:', e, 'Response:', text);
+              throw new Error('Invalid response from server: ' + (text || 'empty response'));
+            }
+            
+            if (result.success && result.orderId) {
+              console.log('[PayPalOneTimePayment] Order created:', result.orderId);
+              return result.orderId;
+            } else {
+              console.error('[PayPalOneTimePayment] Order creation failed:', result.error);
+              throw new Error(result.error || 'Failed to create order');
+            }
+          } catch (error: any) {
+            console.error('[PayPalOneTimePayment] Create order error:', error);
+            throw error;
           }
         },
         onApprove: async function(data: any, actions: any) {
