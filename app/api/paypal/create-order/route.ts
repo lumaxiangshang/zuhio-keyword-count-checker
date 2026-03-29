@@ -119,30 +119,34 @@ export async function POST(request: NextRequest) {
     const order = await response.json();
     console.log(`[${reqId}] PayPal order created:`, order.id);
 
-    // 在数据库中创建支付记录
-    const payment = await prisma.payment.create({
-      data: {
-        userId: finalUserId || 'anonymous',
-        amount: parseFloat(price),
-        currency: 'USD',
-        paypalOrderId: order.id,
-        paymentType: 'ONE_TIME',
-        status: 'PENDING',
-        credits,
-        metadata: {
-          order,
-          createdAt: new Date().toISOString(),
+    // 在数据库中创建支付记录（如果用户存在）
+    let paymentId = null;
+    if (finalUserId) {
+      const payment = await prisma.payment.create({
+        data: {
+          userId: finalUserId,
+          amount: parseFloat(price),
+          currency: 'USD',
+          paypalOrderId: order.id,
+          paymentType: 'ONE_TIME',
+          status: 'PENDING',
+          credits,
+          metadata: {
+            order,
+            createdAt: new Date().toISOString(),
+          },
         },
-      },
-    });
-
-    console.log(`[${reqId}] Payment record created: ${payment.id}`);
+      });
+      paymentId = payment.id;
+      console.log(`[${reqId}] Payment record created: ${paymentId}`);
+    }
 
     return NextResponse.json({
       success: true,
       orderId: order.id,
       approvalUrl: order.links?.find((link: any) => link.rel === 'approve')?.href,
-      paymentId: payment.id,
+      paymentId: paymentId,
+      message: paymentId ? 'Order and payment created' : 'Order created (no user)',
     });
 
   } catch (error: any) {

@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`[${reqId}] Capturing order: ${orderId}`);
+    console.log(`[${reqId}] Capturing order: ${orderId}, paymentId: ${paymentId || 'N/A'}`);
 
     const accessToken = await getAccessToken();
 
@@ -69,43 +69,50 @@ export async function POST(request: NextRequest) {
     const captureData = await response.json();
     console.log(`[${reqId}] Order captured:`, captureData.id);
 
-    // 更新支付记录
-    const payment = await prisma.payment.update({
-      where: { paypalOrderId: orderId },
-      data: {
-        status: 'COMPLETED',
-        paypalCaptureId: captureData.id,
-        updatedAt: new Date(),
-      },
-    });
-
-    console.log(`[${reqId}] Payment updated: ${payment.id}`);
-
-    // 给用户添加积分
-    if (payment.userId && payment.credits) {
-      const user = await prisma.user.update({
-        where: { id: payment.userId },
-        data: {
-          credits: {
-            increment: payment.credits,
+    // 更新支付记录（如果存在）
+    if (paymentId) {
+      try {
+        const payment = await prisma.payment.update({
+          where: { id: paymentId },
+          data: {
+            status: 'COMPLETED',
+            paypalCaptureId: captureData.id,
+            updatedAt: new Date(),
           },
-        },
-      });
+        });
 
-      console.log(`[${reqId}] User ${user.id} received ${payment.credits} credits. New balance: ${user.credits}`);
+        console.log(`[${reqId}] Payment updated: ${payment.id}`);
 
-      return NextResponse.json({
-        success: true,
-        message: 'Payment successful',
-        credits: payment.credits,
-        newBalance: user.credits,
-        captureData,
-      });
+        // 给用户添加积分
+        if (payment.userId && payment.credits) {
+          const user = await prisma.user.update({
+            where: { id: payment.userId },
+            data: {
+              credits: {
+                increment: payment.credits,
+              },
+            },
+          });
+
+          console.log(`[${reqId}] User ${user.id} received ${payment.credits} credits. New balance: ${user.credits}`);
+
+          return NextResponse.json({
+            success: true,
+            message: 'Payment successful',
+            credits: payment.credits,
+            newBalance: user.credits,
+            captureData,
+          });
+        }
+      } catch (dbError: any) {
+        console.error(`[${reqId}] Database error:`, dbError.message);
+        // 继续返回成功，不阻断流程
+      }
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Payment successful (no user associated)',
+      message: 'Payment successful',
       captureData,
     });
 
