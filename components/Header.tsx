@@ -31,7 +31,7 @@ export default function Header({ currentLanguage, onLanguageChange }: HeaderProp
           {/* Desktop Navigation - 右侧：登录 + 语言 */}
           <div className="hidden md:flex items-center gap-4">
             {/* 登录组件 */}
-            <GoogleLogin language={currentLanguage} />
+            <GoogleLogin />
             
             {/* 分隔线 */}
             <div className="w-px h-8 bg-white/20"></div>
@@ -64,7 +64,7 @@ export default function Header({ currentLanguage, onLanguageChange }: HeaderProp
           <div className="md:hidden py-6 border-t border-white/20 space-y-4 animate-fade-in">
             {/* 登录组件（移动端） */}
             <div className="flex justify-center">
-              <GoogleLogin language={currentLanguage} />
+              <GoogleLogin />
             </div>
             
             {/* 分隔线 */}
