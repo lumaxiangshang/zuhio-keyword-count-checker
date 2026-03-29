@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { PrismaClient } from '@prisma/client';
 
+const prisma = new PrismaClient();
 const PAYPAL_BASE_URL = process.env.PAYPAL_API_URL || 'https://api-m.sandbox.paypal.com';
 
 async function getAccessToken() {
@@ -29,12 +30,15 @@ async function getAccessToken() {
   return data.access_token;
 }
 
+/**
+ * 捕获 PayPal 订单并添加积分
+ */
 export async function POST(request: NextRequest) {
   const reqId = crypto.randomUUID();
   console.log(`[${reqId}] Capture Order - Request received`);
 
   try {
-    const { orderId } = await request.json();
+    const { orderId, paymentId } = await request.json();
 
     if (!orderId) {
       return NextResponse.json(
@@ -43,30 +47,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`[${reqId}] Capturing order:`, orderId);
-
-    // 查找数据库中的支付记录
-    const payment = await prisma.payment.findUnique({
-      where: { paypalOrderId: orderId },
-      include: { user: true },
-    });
-
-    if (!payment) {
-      console.error(`[${reqId}] Payment record not found for order:`, orderId);
-      return NextResponse.json(
-        { success: false, error: 'Payment record not found' },
-        { status: 404 }
-      );
-    }
-
-    if (payment.status === 'COMPLETED') {
-      console.log(`[${reqId}] Payment already completed`);
-      return NextResponse.json({
-        success: true,
-        status: 'ALREADY_COMPLETED',
-        credits: payment.credits,
-      });
-    }
+    console.log(`[${reqId}] Capturing order: ${orderId}`);
 
     const accessToken = await getAccessToken();
 
@@ -85,68 +66,48 @@ export async function POST(request: NextRequest) {
       throw new Error(`Failed to capture order: ${error}`);
     }
 
-    const captureDetails = await response.json();
-    const paymentStatus = captureDetails.status;
-    const purchaseUnit = captureDetails.purchase_units?.[0];
-    const payments = purchaseUnit?.payments?.captures?.[0];
+    const captureData = await response.json();
+    console.log(`[${reqId}] Order captured:`, captureData.id);
 
-    console.log(`[${reqId}] PayPal capture response:`, {
-      status: paymentStatus,
-      captureId: payments?.id,
-      amount: payments?.amount?.value,
+    // 更新支付记录
+    const payment = await prisma.payment.update({
+      where: { paypalOrderId: orderId },
+      data: {
+        status: 'COMPLETED',
+        paypalCaptureId: captureData.id,
+        updatedAt: new Date(),
+      },
     });
 
-    if (paymentStatus === 'COMPLETED') {
-      // 使用事务更新数据库
-      const [updatedPayment, updatedUser] = await prisma.$transaction([
-        // 更新支付记录
-        prisma.payment.update({
-          where: { id: payment.id },
-          data: {
-            status: 'COMPLETED',
-            paypalCaptureId: payments?.id,
-            metadata: {
-              ...payment.metadata,
-              captureDetails,
-            },
-          },
-        }),
-        // 添加积分到用户账户
-        prisma.user.update({
-          where: { id: payment.userId },
-          data: {
-            credits: { increment: payment.credits || 0 },
-          },
-        }),
-      ]);
+    console.log(`[${reqId}] Payment updated: ${payment.id}`);
 
-      console.log(`[${reqId}] Payment completed and credits added:`, {
-        userId: payment.userId,
-        creditsAdded: payment.credits,
-        newCreditBalance: updatedUser.credits,
+    // 给用户添加积分
+    if (payment.userId && payment.credits) {
+      const user = await prisma.user.update({
+        where: { id: payment.userId },
+        data: {
+          credits: {
+            increment: payment.credits,
+          },
+        },
       });
+
+      console.log(`[${reqId}] User ${user.id} received ${payment.credits} credits. New balance: ${user.credits}`);
 
       return NextResponse.json({
         success: true,
-        status: 'COMPLETED',
-        captureId: payments?.id,
-        amount: payments?.amount?.value,
-        currency: payments?.amount?.currency_code,
+        message: 'Payment successful',
         credits: payment.credits,
-        userCredits: updatedUser.credits,
-      });
-    } else {
-      // 支付未完成，更新状态
-      await prisma.payment.update({
-        where: { id: payment.id },
-        data: { status: 'FAILED' },
-      });
-
-      return NextResponse.json({
-        success: false,
-        error: `Payment status: ${paymentStatus}`,
+        newBalance: user.credits,
+        captureData,
       });
     }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Payment successful (no user associated)',
+      captureData,
+    });
 
   } catch (error: any) {
     console.error(`[${reqId}] Capture Order Error:`, error);
@@ -154,5 +115,7 @@ export async function POST(request: NextRequest) {
       { success: false, error: error.message },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }

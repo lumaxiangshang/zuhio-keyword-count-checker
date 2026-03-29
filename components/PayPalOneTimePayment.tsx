@@ -80,25 +80,25 @@ export default function PayPalOneTimePayment({
           console.log('[PayPalOneTimePayment] Creating order:', credits, price);
           
           try {
-            // 使用 cache busting 避免缓存
-            const response = await fetch('/api/paypal/create-order-lite?t=' + Date.now(), {
+            // 获取当前登录用户
+            const { auth } = await import('@/lib/firebase');
+            const currentUser = auth.currentUser;
+            
+            const response = await fetch('/api/paypal/create-order', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 credits,
                 price: price.toString(),
+                userId: currentUser?.uid,
+                userEmail: currentUser?.email,
               }),
             });
 
-            const text = await response.text();
-            console.log('[PayPalOneTimePayment] Raw response:', text);
+            const result = await response.json();
             
-            let result;
-            try {
-              result = JSON.parse(text);
-            } catch (e) {
-              console.error('[PayPalOneTimePayment] JSON parse error:', e, 'Response:', text);
-              throw new Error('Invalid response from server: ' + (text || 'empty response'));
+            if (!response.ok) {
+              throw new Error(result.error || 'Failed to create order');
             }
             
             if (result.success && result.orderId) {
@@ -127,17 +127,22 @@ export default function PayPalOneTimePayment({
 
             const result = await response.json();
             
+            if (!response.ok) {
+              throw new Error(result.error || 'Payment capture failed');
+            }
+            
             if (result.success) {
               console.log('Payment captured:', result);
+              // 刷新页面更新用户积分
               if (onSuccess) onSuccess();
-              router.push(`/dashboard?payment=success&credits=${credits}`);
+              window.location.href = `/dashboard?payment=success&credits=${credits}&newBalance=${result.newBalance || ''}`;
             } else {
               console.error('Capture failed:', result.error);
               setError(result.error || 'Payment failed. Please try again.');
             }
           } catch (err: any) {
             console.error('Capture error:', err);
-            setError('Network error. Please try again.');
+            setError('Payment successful but failed to update. Please contact support.');
           }
         },
         onError: function(err: any) {

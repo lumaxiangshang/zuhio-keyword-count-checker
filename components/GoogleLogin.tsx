@@ -1,76 +1,113 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { signInWithGoogle, logout, onAuthChange } from '@/lib/firebase';
-import { Language } from '@/lib/i18n';
-import { User } from 'firebase/auth';
+import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
+import { auth, googleProvider } from '@/lib/firebase';
 
 interface GoogleLoginProps {
-  language: Language;
+  onLoginSuccess?: (user: any) => void;
 }
 
-export default function GoogleLogin({ language }: GoogleLoginProps) {
+export default function GoogleLogin({ onLoginSuccess }: GoogleLoginProps) {
   const [user, setUser] = useState<User | null>(null);
+  const [dbUser, setDbUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // 监听 Firebase 认证状态
   useEffect(() => {
-    const unsubscribe = onAuthChange((user) => {
-      setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
       setLoading(false);
+
+      // 如果用户已登录，同步到数据库
+      if (firebaseUser) {
+        syncUserToDatabase(firebaseUser);
+      } else {
+        setDbUser(null);
+      }
     });
 
     return () => unsubscribe();
   }, []);
 
-  const handleSignIn = async () => {
+  // 同步用户到数据库
+  const syncUserToDatabase = async (firebaseUser: User) => {
+    if (!firebaseUser.email) return;
+
+    setSyncing(true);
     setError(null);
-    const result = await signInWithGoogle();
-    if (result.error) {
-      setError(result.error);
+
+    try {
+      const response = await fetch('/api/auth/callback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName,
+          photoURL: firebaseUser.photoURL,
+          emailVerified: firebaseUser.emailVerified,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setDbUser(data.user);
+        if (onLoginSuccess) {
+          onLoginSuccess(data.user);
+        }
+        console.log('User synced to database:', data.user);
+      } else {
+        console.error('Failed to sync user:', data.error);
+        setError(data.error);
+      }
+    } catch (err: any) {
+      console.error('Sync error:', err);
+      setError('Failed to sync user data');
+    } finally {
+      setSyncing(false);
     }
   };
 
-  const handleSignOut = async () => {
-    await logout();
+  // Google 登录
+  const handleSignIn = async () => {
+    setError(null);
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      console.log('Google sign-in successful:', result.user.email);
+      // syncUserToDatabase 会在 onAuthStateChanged 中自动调用
+    } catch (err: any) {
+      console.error('Google Sign-In Error:', err);
+      if (err.code === 'auth/popup-closed-by-user') {
+        setError('Login cancelled');
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setError('Domain not authorized. Please contact support.');
+      } else {
+        setError('Login failed. Please try again.');
+      }
+    }
   };
 
-  const t = {
-    en: {
-      signIn: 'Sign in with Google',
-      signOut: 'Sign out',
-      welcome: 'Welcome',
-      loading: 'Loading...',
-      error: 'Login failed. Please try again.',
-    },
-    zh: {
-      signIn: '使用 Google 登录',
-      signOut: '退出登录',
-      welcome: '欢迎',
-      loading: '加载中...',
-      error: '登录失败，请重试。',
-    },
-    fr: {
-      signIn: 'Se connecter avec Google',
-      signOut: 'Se déconnecter',
-      welcome: 'Bienvenue',
-      loading: 'Chargement...',
-      error: 'Échec de la connexion. Veuillez réessayer.',
-    },
-    de: {
-      signIn: 'Mit Google anmelden',
-      signOut: 'Abmelden',
-      welcome: 'Willkommen',
-      loading: 'Laden...',
-      error: 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.',
-    },
-  }[language];
+  // 登出
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      setUser(null);
+      setDbUser(null);
+      console.log('User signed out');
+    } catch (err: any) {
+      console.error('Sign out error:', err);
+    }
+  };
 
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-white/60 text-sm">
         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-        <span>{t.loading}</span>
+        <span>Loading...</span>
       </div>
     );
   }
@@ -88,17 +125,24 @@ export default function GoogleLogin({ language }: GoogleLoginProps) {
             />
           )}
           <div className="text-sm">
-            <div className="font-medium">{t.welcome}, {user.displayName || user.email?.split('@')[0]}</div>
-            <div className="text-xs text-white/60">{user.email}</div>
+            <div className="font-medium">
+              {user.displayName || user.email?.split('@')[0]}
+            </div>
+            {dbUser && (
+              <div className="text-xs text-white/60">
+                {dbUser.credits} credits • {dbUser.subscriptionPlan}
+              </div>
+            )}
           </div>
         </div>
         
         {/* 登出按钮 */}
         <button
           onClick={handleSignOut}
-          className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm text-white transition-colors"
+          disabled={syncing}
+          className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm text-white transition-colors disabled:opacity-50"
         >
-          {t.signOut}
+          {syncing ? 'Syncing...' : 'Sign out'}
         </button>
       </div>
     );
@@ -117,13 +161,13 @@ export default function GoogleLogin({ language }: GoogleLoginProps) {
           <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
           <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
         </svg>
-        {t.signIn}
+        Sign in with Google
       </button>
       
       {/* 错误提示 */}
       {error && (
         <div className="text-xs text-red-300 text-center">
-          {t.error}
+          {error}
         </div>
       )}
     </div>

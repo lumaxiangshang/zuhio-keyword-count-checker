@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { PrismaClient } from '@prisma/client';
 
+const prisma = new PrismaClient();
 const PAYPAL_BASE_URL = process.env.PAYPAL_API_URL || 'https://api-m.sandbox.paypal.com';
 
 async function getAccessToken() {
@@ -29,23 +30,37 @@ async function getAccessToken() {
   return data.access_token;
 }
 
+/**
+ * 创建 PayPal 订单（完整版 - 保存数据库）
+ */
 export async function POST(request: NextRequest) {
   const reqId = crypto.randomUUID();
   console.log(`[${reqId}] Create Order - Request received`);
 
   try {
-    const { credits, price, userId } = await request.json();
+    const { credits, price, userId, userEmail } = await request.json();
 
-    if (!credits || !price || !userId) {
+    if (!credits || !price) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields: credits, price, userId' },
+        { success: false, error: 'Missing required fields: credits, price' },
         { status: 400 }
       );
     }
 
-    console.log(`[${reqId}] Creating order for user ${userId}, credits: ${credits}, price: $${price}`);
+    // 如果没有 userId，尝试通过 email 查找用户
+    let finalUserId = userId;
+    if (!finalUserId && userEmail) {
+      const user = await prisma.user.findUnique({
+        where: { email: userEmail },
+        select: { id: true },
+      });
+      finalUserId = user?.id;
+    }
+
+    console.log(`[${reqId}] Creating order: ${credits} credits for $${price}, userId: ${finalUserId}`);
 
     const accessToken = await getAccessToken();
+    console.log(`[${reqId}] Access token obtained`);
 
     // 创建 PayPal 订单
     const response = await fetch(`${PAYPAL_BASE_URL}/v2/checkout/orders`, {
@@ -59,8 +74,8 @@ export async function POST(request: NextRequest) {
         intent: 'CAPTURE',
         purchase_units: [
           {
-            reference_id: `credits-${userId}-${Date.now()}`,
-            custom_id: userId,
+            reference_id: `credits-${Date.now()}`,
+            custom_id: finalUserId || 'guest',
             amount: {
               currency_code: 'USD',
               value: price.toString(),
@@ -107,7 +122,7 @@ export async function POST(request: NextRequest) {
     // 在数据库中创建支付记录
     const payment = await prisma.payment.create({
       data: {
-        userId,
+        userId: finalUserId || 'anonymous',
         amount: parseFloat(price),
         currency: 'USD',
         paypalOrderId: order.id,
@@ -116,11 +131,12 @@ export async function POST(request: NextRequest) {
         credits,
         metadata: {
           order,
+          createdAt: new Date().toISOString(),
         },
       },
     });
 
-    console.log(`[${reqId}] Payment record created in database:`, payment.id);
+    console.log(`[${reqId}] Payment record created: ${payment.id}`);
 
     return NextResponse.json({
       success: true,
@@ -135,5 +151,7 @@ export async function POST(request: NextRequest) {
       { success: false, error: error.message },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }
