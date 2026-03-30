@@ -87,8 +87,6 @@ model Subscription {
   // 周期信息
   currentPeriodStart  DateTime
   currentPeriodEnd    DateTime
-  cancelledAt         DateTime?     // 取消时间
-  cancelReason        String?       // 取消原因
   
   // 时间戳
   createdAt           DateTime      @default(now())
