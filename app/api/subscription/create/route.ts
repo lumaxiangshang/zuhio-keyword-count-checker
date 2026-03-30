@@ -115,24 +115,39 @@ export async function POST(request: NextRequest) {
     const subscription = await response.json();
     console.log(`[${reqId}] PayPal subscription created:`, subscription.id);
 
-    // 创建临时订阅记录（待激活）
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-    if (baseUrl) {
-      await prisma.subscription.create({
+    // 先查找或创建用户（确保外键约束满足）
+    let user = await prisma.user.findUnique({
+      where: { email: userEmail },
+    });
+
+    if (!user) {
+      user = await prisma.user.create({
         data: {
-          userId: 'pending', // 临时值，激活时更新
-          paypalSubscriptionId: subscription.id,
-          planId: plan.id,
-          planName: plan.name,
-          billingCycle: plan.billingCycle as 'MONTHLY' | 'YEARLY',
-          amount: plan.price,
-          currency: plan.currency,
-          status: 'INACTIVE',
-          currentPeriodStart: new Date(),
-          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 临时值
+          email: userEmail,
+          name: userEmail.split('@')[0],
+          subscriptionPlan: 'FREE',
+          subscriptionStatus: 'INACTIVE',
         },
       });
+      console.log(`[${reqId}] Created new user:`, user.id);
     }
+
+    // 创建订阅记录（使用真实的 userId）
+    await prisma.subscription.create({
+      data: {
+        userId: user.id,
+        paypalSubscriptionId: subscription.id,
+        planId: plan.id,
+        planName: plan.name,
+        billingCycle: plan.billingCycle as 'MONTHLY' | 'YEARLY',
+        amount: plan.price,
+        currency: plan.currency,
+        status: 'INACTIVE',
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      },
+    });
+    console.log(`[${reqId}] Subscription record created for user:`, user.id);
 
     const approvalUrl = subscription.links?.find((link: any) => link.rel === 'approve')?.href;
 
