@@ -6,11 +6,14 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { User as FirebaseUser } from 'firebase/auth';
 import Link from 'next/link';
+import paypalConfig from '@/lib/paypal-config';
 
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [dbUser, setDbUser] = useState<any>(null);
+  const [subscription, setSubscription] = useState<any>(null);
+  const [usageStats, setUsageStats] = useState({ today: 0, total: 0, limit: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -21,12 +24,14 @@ export default function DashboardPage() {
       }
       setUser(firebaseUser);
       
-      // 获取数据库用户信息
-      fetch(`/api/auth/callback?email=${encodeURIComponent(firebaseUser.email!)}`)
+      // 获取用户完整信息（包括订阅）
+      fetch(`/api/user/me`)
         .then(res => res.json())
         .then(data => {
           if (data.success) {
             setDbUser(data.user);
+            setSubscription(data.subscription);
+            setUsageStats(data.usageStats || { today: 0, total: 0, limit: 0 });
           }
         })
         .catch(err => console.error('Get user error:', err))
@@ -47,6 +52,16 @@ export default function DashboardPage() {
     );
   }
 
+  const isSubscribed = dbUser?.subscriptionStatus === 'ACTIVE' && 
+                       (dbUser?.subscriptionPlan === 'PRO');
+  
+  const planName = dbUser?.subscriptionPlan || 'FREE';
+  const subscriptionStatus = dbUser?.subscriptionStatus || 'INACTIVE';
+  
+  // 计算剩余次数
+  const remainingToday = isSubscribed ? '∞' : Math.max(0, 3 - usageStats.today);
+  const resetTime = 'Tomorrow at 00:00';
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* 顶部导航栏 */}
@@ -63,6 +78,11 @@ export default function DashboardPage() {
 
             {/* 用户信息 */}
             <div className="flex items-center gap-4">
+              {isSubscribed && (
+                <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                  PRO
+                </span>
+              )}
               {user?.photoURL && (
                 <img
                   src={user.photoURL}
@@ -73,7 +93,7 @@ export default function DashboardPage() {
               <span className="text-sm text-gray-600 hidden sm:block">
                 {user?.displayName || user?.email?.split('@')[0]}
               </span>
-              <Link href="/" className="text-sm text-purple-600 hover:text-purple-700 font-medium">
+              <Link href="/" className="text-sm text-gray-600 hover:text-gray-800">
                 退出
               </Link>
             </div>
@@ -88,98 +108,236 @@ export default function DashboardPage() {
             Welcome back, {user?.displayName || user?.email?.split('@')[0]}! 👋
           </h1>
           <p className="text-gray-600">
-            Here's your account overview.
+            Here's your account overview
           </p>
         </div>
 
-        {/* 用户信息卡片 */}
-        {dbUser && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            {/* 积分卡片 */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <span className="text-2xl">💎</span>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Credits</p>
-                  <p className="text-2xl font-bold text-gray-900">{dbUser.credits}</p>
-                </div>
-              </div>
+        {/* 订阅状态概览 */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* 订阅计划 */}
+          <div className={`rounded-xl shadow-sm border p-6 ${
+            isSubscribed 
+              ? 'bg-gradient-to-br from-purple-500 to-blue-500 text-white border-transparent' 
+              : 'bg-white border-gray-200'
+          }`}>
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-2xl">📊</span>
+              <span className={`text-sm ${isSubscribed ? 'text-white/80' : 'text-gray-600'}`}>Plan</span>
             </div>
+            <p className="text-2xl font-bold">{planName}</p>
+            {isSubscribed && (
+              <p className="text-sm text-white/80 mt-1">Active Subscription</p>
+            )}
+          </div>
 
-            {/* 订阅计划卡片 */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <span className="text-2xl">📊</span>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Plan</p>
-                  <p className="text-2xl font-bold text-gray-900">{dbUser.subscriptionPlan || 'FREE'}</p>
-                </div>
-              </div>
+          {/* 今日使用 */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-2xl">📈</span>
+              <span className="text-sm text-gray-600">Today</span>
             </div>
+            <p className="text-2xl font-bold text-gray-900">
+              {usageStats.today} / {remainingToday}
+            </p>
+            <p className="text-sm text-gray-500 mt-1">
+              {isSubscribed ? 'Unlimited' : `Resets ${resetTime}`}
+            </p>
+          </div>
 
-            {/* 订阅状态卡片 */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <span className="text-2xl">✅</span>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Status</p>
-                  <p className="text-2xl font-bold text-gray-900">{dbUser.subscriptionStatus || 'INACTIVE'}</p>
-                </div>
+          {/* 总使用量 */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-2xl">🎯</span>
+              <span className="text-sm text-gray-600">Total</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{usageStats.total}</p>
+            <p className="text-sm text-gray-500 mt-1">Analyses performed</p>
+          </div>
+        </div>
+
+        {/* 订阅升级提示（非订阅用户） */}
+        {!isSubscribed && (
+          <div className="mb-8 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl shadow-lg p-6 text-white">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-xl font-bold mb-2">🚀 Upgrade to Pro for Unlimited Access</h3>
+                <p className="text-white/80">
+                  Get unlimited keyword analyses, export reports, and 30-day history
+                </p>
+              </div>
+              <Link 
+                href="/pricing"
+                className="px-6 py-3 bg-white text-purple-600 rounded-lg font-bold hover:bg-gray-100 transition-colors whitespace-nowrap"
+              >
+                View Plans →
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* 订阅详情（订阅用户） */}
+        {isSubscribed && subscription && (
+          <div className="mb-8 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Subscription Details</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Current Plan</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  PRO {subscription.billingCycle === 'MONTHLY' ? 'Monthly' : 'Yearly'}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Next Billing Date</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {subscription.currentPeriodEnd 
+                    ? new Date(subscription.currentPeriodEnd).toLocaleDateString() 
+                    : 'N/A'}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Amount</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  ${subscription.amount}/{subscription.billingCycle === 'MONTHLY' ? 'mo' : 'yr'}
+                </p>
               </div>
             </div>
           </div>
         )}
 
         {/* 快捷操作 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* 购买积分 */}
-          <Link href="/credits" className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl p-6 text-white hover:opacity-90 transition-opacity">
-            <h3 className="text-xl font-bold mb-2">💰 Buy Credits</h3>
-            <p className="text-white/80 mb-4">Purchase credits for keyword analysis</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {/* 开始分析 */}
+          <Link href="/" className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl p-6 text-white hover:opacity-90 transition-opacity">
+            <h3 className="text-xl font-bold mb-2">🔍 Start Analyzing</h3>
+            <p className="text-white/80 mb-4">
+              {isSubscribed ? 'Unlimited keyword density checks' : `${remainingToday} checks remaining today`}
+            </p>
             <span className="inline-block px-4 py-2 bg-white text-purple-600 rounded-lg font-medium">
-              Get Started →
+              Go to Analyzer →
             </span>
           </Link>
 
-          {/* 订阅计划 */}
+          {/* 订阅管理 */}
           <Link href="/pricing" className="bg-gradient-to-r from-green-600 to-teal-600 rounded-xl p-6 text-white hover:opacity-90 transition-opacity">
-            <h3 className="text-xl font-bold mb-2">📈 Subscription Plans</h3>
-            <p className="text-white/80 mb-4">Unlimited analyses with Pro plan</p>
+            <h3 className="text-xl font-bold mb-2">📈 Manage Subscription</h3>
+            <p className="text-white/80 mb-4">
+              {isSubscribed ? 'Upgrade or change your plan' : 'Unlock unlimited analyses'}
+            </p>
             <span className="inline-block px-4 py-2 bg-white text-green-600 rounded-lg font-medium">
-              View Plans →
+              {isSubscribed ? 'Manage Plan →' : 'View Plans →'}
             </span>
           </Link>
         </div>
 
+        {/* 定价计划对比 */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Choose Your Plan</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Free Plan */}
+            <div className={`border rounded-xl p-6 ${
+              planName === 'FREE' ? 'border-purple-500 bg-purple-50' : 'border-gray-200'
+            }`}>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Free</h3>
+              <p className="text-3xl font-bold text-gray-900 mb-4">$0</p>
+              <ul className="space-y-2 text-sm text-gray-600 mb-6">
+                <li className="flex items-center gap-2">
+                  <span className="text-green-500">✓</span>
+                  3 analyses / day
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-green-500">✓</span>
+                  Basic keyword density
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-green-500">✓</span>
+                  Word count stats
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-gray-300">✗</span>
+                  Export results
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-gray-300">✗</span>
+                  History tracking
+                </li>
+              </ul>
+              {planName === 'FREE' && (
+                <button className="w-full py-2 bg-purple-100 text-purple-700 rounded-lg font-medium">
+                  Current Plan
+                </button>
+              )}
+            </div>
+
+            {/* Pro Plan */}
+            <div className={`border-2 rounded-xl p-6 ${
+              planName === 'PRO' ? 'border-purple-500 bg-purple-50' : 'border-purple-500'
+            }`}>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-lg font-bold text-gray-900">Pro</h3>
+                <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-medium">
+                  Popular
+                </span>
+              </div>
+              <p className="text-3xl font-bold text-gray-900 mb-1">$9.99</p>
+              <p className="text-sm text-gray-500 mb-4">/ month</p>
+              <ul className="space-y-2 text-sm text-gray-600 mb-6">
+                <li className="flex items-center gap-2">
+                  <span className="text-green-500">✓</span>
+                  Unlimited analyses
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-green-500">✓</span>
+                  Export PDF/CSV
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-green-500">✓</span>
+                  30-day history
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-green-500">✓</span>
+                  Advanced reports
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-green-500">✓</span>
+                  Email support
+                </li>
+              </ul>
+              {planName === 'PRO' ? (
+                <button className="w-full py-2 bg-purple-100 text-purple-700 rounded-lg font-medium">
+                  Current Plan
+                </button>
+              ) : (
+                <Link href="/pricing?plan=proMonthly" className="block w-full py-2 bg-purple-600 text-white text-center rounded-lg font-medium hover:bg-purple-700">
+                  Upgrade to Pro
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* 使用说明 */}
-        <div className="mt-8 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4">How to Use</h2>
           <div className="space-y-3 text-gray-600">
             <div className="flex items-start gap-3">
               <span className="flex-shrink-0 w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-sm font-bold text-purple-600">1</span>
               <div>
                 <p className="font-medium text-gray-900">Analyze Text</p>
-                <p>Use our free keyword density checker on the home page</p>
+                <p>Use our keyword density checker on the home page</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
               <span className="flex-shrink-0 w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-sm font-bold text-purple-600">2</span>
               <div>
-                <p className="font-medium text-gray-900">Buy Credits</p>
-                <p>Purchase credits when you need more analyses</p>
+                <p className="font-medium text-gray-900">Track Usage</p>
+                <p>Monitor your daily and total analyses in this dashboard</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
               <span className="flex-shrink-0 w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-sm font-bold text-purple-600">3</span>
               <div>
-                <p className="font-medium text-gray-900">Upgrade Plan</p>
-                <p>Get unlimited analyses with Pro or Business subscription</p>
+                <p className="font-medium text-gray-900">Upgrade to Pro</p>
+                <p>Get unlimited analyses for just $9.99/month</p>
               </div>
             </div>
           </div>

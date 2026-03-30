@@ -1,4 +1,5 @@
-// Prisma Schema for Zuhio - Subscription Only Model
+// Prisma Schema for Zuhio - Pure Subscription Model
+// 纯订阅制模型 - 无积分系统
 
 generator client {
   provider = "prisma-client-js"
@@ -9,7 +10,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============================================
 // 用户模型
+// ============================================
 model User {
   id                    String    @id @default(cuid())
   email                 String    @unique
@@ -17,11 +20,9 @@ model User {
   image                 String?
   emailVerified         DateTime?
   
-  // 订阅信息
+  // 订阅信息（简化：直接从 Subscription 表获取最新状态）
   subscriptionPlan      SubscriptionPlan @default(FREE)
   subscriptionStatus    SubscriptionStatus @default(INACTIVE)
-  subscriptionEndDate   DateTime?
-  paypalSubscriptionId  String?   @unique
   
   // 使用统计
   todayUsage            Int       @default(0)
@@ -29,6 +30,7 @@ model User {
   
   // 关系
   subscriptions         Subscription[]
+  subscriptionEvents    SubscriptionEvent[]
   
   // 时间戳
   createdAt             DateTime  @default(now())
@@ -37,24 +39,33 @@ model User {
   // 索引
   @@index([email])
   @@index([subscriptionStatus])
+  @@index([subscriptionPlan])
 }
 
+// ============================================
 // 订阅计划类型
+// ============================================
 enum SubscriptionPlan {
   FREE
   PRO
   BUSINESS
 }
 
+// ============================================
 // 订阅状态
+// ============================================
 enum SubscriptionStatus {
-  INACTIVE
-  ACTIVE
-  CANCELLED
-  EXPIRED
+  INACTIVE      // 从未订阅
+  ACTIVE        // 活跃订阅中
+  CANCELLED     // 用户取消（期末失效）
+  EXPIRED       // 已过期
+  PAST_DUE      // 付款逾期
+  TRIALING      // 试用中
 }
 
-// 订阅记录
+// ============================================
+// 订阅记录（核心表）
+// ============================================
 model Subscription {
   id                  String        @id @default(cuid())
   userId              String
@@ -64,19 +75,22 @@ model Subscription {
   paypalSubscriptionId String       @unique
   
   // 计划信息
-  planId              String
-  planName            String
-  billingCycle        BillingCycle
-  amount              Float
+  planId              String        // PayPal 计划 ID
+  planName            String        // PRO/BUSINESS
+  billingCycle        BillingCycle  // MONTHLY/YEARLY
+  amount              Float         // 价格（USD）
   currency            String        @default("USD")
   
   // 状态
   status              SubscriptionStatus @default(ACTIVE)
   
-  // 时间
+  // 周期信息
   currentPeriodStart  DateTime
   currentPeriodEnd    DateTime
-  cancelledAt         DateTime?
+  trialStart          DateTime?     // 试用开始
+  trialEnd            DateTime?     // 试用结束
+  cancelledAt         DateTime?     // 取消时间
+  cancelReason        String?       // 取消原因
   
   // 时间戳
   createdAt           DateTime      @default(now())
@@ -86,14 +100,98 @@ model Subscription {
   @@index([userId])
   @@index([paypalSubscriptionId])
   @@index([status])
+  @@index([planName])
 }
 
+// ============================================
+// 计费周期
+// ============================================
 enum BillingCycle {
   MONTHLY
   YEARLY
 }
 
-// 使用记录（用于统计）
+// ============================================
+// 订阅事件日志（追踪所有变更）
+// ============================================
+model SubscriptionEvent {
+  id                  String        @id @default(cuid())
+  userId              String
+  user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscriptionId      String?       // 关联的订阅 ID（可选）
+  
+  // 事件类型
+  eventType           SubscriptionEventType
+  
+  // 事件详情
+  oldPlan             SubscriptionPlan?
+  newPlan             SubscriptionPlan?
+  oldStatus           SubscriptionStatus?
+  newStatus           SubscriptionStatus?
+  amount              Float?          // 涉及金额
+  paypalSubscriptionId String?        // PayPal 订阅 ID
+  metadata            Json?           // 额外信息
+  
+  // 时间戳
+  createdAt           DateTime      @default(now())
+  
+  // 索引
+  @@index([userId])
+  @@index([eventType])
+  @@index([createdAt])
+}
+
+enum SubscriptionEventType {
+  SUBSCRIPTION_CREATED
+  SUBSCRIPTION_ACTIVATED
+  SUBSCRIPTION_CANCELLED
+  SUBSCRIPTION_RENEWED
+  SUBSCRIPTION_EXPIRED
+  SUBSCRIPTION_UPGRADED
+  SUBSCRIPTION_DOWNGRADED
+  PAYMENT_SUCCEEDED
+  PAYMENT_FAILED
+  TRIAL_STARTED
+  TRIAL_CONVERTED
+}
+
+// ============================================
+// 订阅计划配置（动态管理价格）
+// ============================================
+model SubscriptionPlanConfig {
+  id                  String        @id @default(cuid())
+  
+  // 计划标识
+  planName            SubscriptionPlan
+  billingCycle        BillingCycle
+  
+  // 价格信息
+  price               Float         // 价格（USD）
+  currency            String        @default("USD")
+  
+  // PayPal 计划 ID
+  paypalPlanId        String        @unique
+  
+  // 功能限制
+  dailyLimit          Int           // 每日使用次数限制
+  features            Json?         // 功能列表
+  
+  // 状态
+  isActive            Boolean       @default(true)
+  isPopular           Boolean       @default(false)  // 是否推荐
+  
+  // 时间戳
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  
+  // 索引
+  @@unique([planName, billingCycle])
+  @@index([isActive])
+}
+
+// ============================================
+// 使用记录（用于统计和分析）
+// ============================================
 model UsageLog {
   id                String    @id @default(cuid())
   userId            String?
@@ -105,4 +203,5 @@ model UsageLog {
   @@index([userId])
   @@index([userEmail])
   @@index([createdAt])
+  @@index([action])
 }

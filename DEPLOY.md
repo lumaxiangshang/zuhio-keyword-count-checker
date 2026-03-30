@@ -1,216 +1,225 @@
-# 🚀 部署指南
+# 🚀 Zuhio - 部署文档
 
-**项目已准备就绪，等待推送到 GitHub**
+## 📋 版本信息
 
----
-
-## 📋 当前状态
-
-✅ 所有代码已提交到 Git  
-⏳ 等待推送到 GitHub  
-⏳ 等待部署到 Vercel/Cloudflare Pages
+**版本：** v2.0.0 - 纯订阅制版  
+**发布日期：** 2026-03-30  
+**核心变更：** 移除积分系统，专注 Pro 订阅计划
 
 ---
 
-## 🔧 推送方法
+## ✅ 部署前检查清单
 
-### 方法 1：使用 GitHub Token（推荐）
+### 1. 环境变量确认
 
-1. **获取 GitHub Token**
-   - 访问 https://github.com/settings/tokens
-   - 创建新的 Personal Access Token
-   - 选择权限：`repo`（完整仓库权限）
-   - 复制生成的 token
-
-2. **设置 Git 认证**
-   ```bash
-   cd /root/.openclaw/workspace/zuhio-keyword-count-checker
-   
-   # 使用 token 推送（替换 YOUR_TOKEN）
-   git push https://YOUR_TOKEN@github.com/lumaxiangshang/zuhio-keyword-count-checker.git main
-   ```
-
-### 方法 2：配置 SSH 密钥
-
-1. **生成 SSH 密钥**
-   ```bash
-   ssh-keygen -t ed25519 -C "your_email@example.com"
-   ```
-
-2. **添加公钥到 GitHub**
-   - 访问 https://github.com/settings/keys
-   - 点击 "New SSH key"
-   - 粘贴 `~/.ssh/id_ed25519.pub` 的内容
-
-3. **修改远程仓库为 SSH**
-   ```bash
-   cd /root/.openclaw/workspace/zuhio-keyword-count-checker
-   git remote set-url origin git@github.com:lumaxiangshang/zuhio-keyword-count-checker.git
-   git push origin main
-   ```
-
-### 方法 3：在本地电脑推送
-
-1. **克隆仓库**
-   ```bash
-   git clone https://github.com/lumaxiangshang/zuhio-keyword-count-checker.git
-   cd zuhio-keyword-count-checker
-   ```
-
-2. **从当前服务器拉取更改**
-   
-   或者直接在本地开发，然后推送。
-
----
-
-## 📦 部署到 Vercel
-
-### 步骤 1：推送到 GitHub
-
-使用上述任一方法推送到 GitHub。
-
-### 步骤 2：连接 Vercel
-
-1. 访问 https://vercel.com/new
-2. 点击 "Import Git Repository"
-3. 选择 `zuhio-keyword-count-checker` 仓库
-4. 点击 "Import"
-
-### 步骤 3：配置环境变量
-
-在 Vercel 项目设置中添加以下环境变量：
+确保 `.env.local` 包含以下必需变量：
 
 ```bash
+# 数据库
+DATABASE_URL="postgresql://..."
+
+# PayPal（沙箱环境）
+NEXT_PUBLIC_PAYPAL_CLIENT_ID="AevvA8o2Kppx2FwFBom4Q6ZzPCTdxCKkeRI2ZBVgerfRZqcvDUWLKYvrLTWK_SBoabipvGH5wBa_1iGw"
+PAYPAL_SECRET="ELoML4ZUrSqaR9O5nNtXjq3Oc1MgO0L60riU1Kx_Z2ixa2Iz3KEl2VqyTKpMetexKBKLzfnIVqSKDswG"
+PAYPAL_API_URL="https://api-m.sandbox.paypal.com"
+
 # Firebase
-NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyBgP_Oy5KTYfsEyNiXrtXwSAp1tztOuDyM
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=zuhio-keyword-count-checker.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=zuhio-keyword-count-checker
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=zuhio-keyword-count-checker.firebasestorage.app
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=289541466359
-NEXT_PUBLIC_FIREBASE_APP_ID=1:289541466359:web:e6105f849bd6a5df90cbf2
-NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-CTZEVL2EWZ
+NEXT_PUBLIC_FIREBASE_API_KEY="AIzaSyBgP_Oy5KTYfsEyNiXrtXwSAp1tztOuDyM"
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="zuhio-keyword-count-checker.firebaseapp.com"
+NEXT_PUBLIC_FIREBASE_PROJECT_ID="zuhio-keyword-count-checker"
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="zuhio-keyword-count-checker.firebasestorage.app"
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="289541466359"
+NEXT_PUBLIC_FIREBASE_APP_ID="1:289541466359:web:e6105f849bd6a5df90cbf2"
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID="G-CTZEVL2EWZ"
 
-# PayPal
-NEXT_PUBLIC_PAYPAL_CLIENT_ID=AevvA8o2Kppx2FwFBom4Q6ZzPCTdxCKkeRI2ZBVgerfRZqcvDUWLKYvrLTWK_SBoabipvGH5wBa_1iGw
-PAYPAL_SECRET=ELoML4ZUrSqaR9O5nNtXjq3Oc1MgO0L60riU1Kx_Z2ixa2Iz3KEl2VqyTKpMetexKBKLzfnIVqSKDswG
-PAYPAL_API_URL=https://api-m.sandbox.paypal.com
-
-# PayPal Plans
-NEXT_PUBLIC_PAYPAL_PLAN_PRO_MONTHLY=P-1AK67303R1503452TNHDOITQ
-NEXT_PUBLIC_PAYPAL_PLAN_PRO_YEARLY=P-9BF18630VW4069643NHDOITY
-NEXT_PUBLIC_PAYPAL_PLAN_BUSINESS_MONTHLY=P-56W56046144411137NHDOITY
-NEXT_PUBLIC_PAYPAL_PLAN_BUSINESS_YEARLY=P-94F994413Y785902JNHDOIUA
+# 应用配置
+NEXT_PUBLIC_BASE_URL="https://zuhio-keyword-count-checker.vercel.app"
 ```
 
-### 步骤 4：部署
-
-点击 "Deploy"，Vercel 会自动构建并部署。
-
----
-
-## ☁️ 部署到 Cloudflare Pages
-
-### 步骤 1：连接 GitHub
-
-1. 访问 https://dash.cloudflare.com/?to=/:account/pages
-2. 点击 "Create a project"
-3. 选择 "Connect to Git"
-4. 选择 `zuhio-keyword-count-checker` 仓库
-
-### 步骤 2：配置构建设置
-
-- **Build command:** `npm run build`
-- **Build output directory:** `.next`
-- **Root directory:** `/`
-
-### 步骤 3：配置环境变量
-
-与 Vercel 相同，添加所有环境变量。
-
-### 步骤 4：部署
-
-点击 "Save and Deploy"。
-
----
-
-## 📊 部署后的测试 URL
-
-部署成功后，访问以下页面测试：
-
-1. **首页:** `https://your-domain.com/`
-2. **定价页:** `https://your-domain.com/pricing`
-3. **积分页:** `https://your-domain.com/credits`
-4. **调试页:** `https://your-domain.com/debug-paypal`
-5. **配置测试:** `https://your-domain.com/paypal-test`
-
----
-
-## 🔐 安全提示
-
-### ⚠️ 重要：生产环境配置
-
-上线前必须：
-
-1. **创建 Live PayPal 账号**
-   - 访问 https://developer.paypal.com
-   - 切换到 Live 模式
-   - 创建新的 App
-   - 获取 Live Client ID 和 Secret
-
-2. **创建 Live 订阅计划**
-   ```bash
-   # 修改脚本中的 URL 为生产环境
-   const PAYPAL_BASE_URL = 'https://api-m.paypal.com';
-   
-   # 重新运行创建脚本
-   npm run paypal:create-products
-   ```
-
-3. **更新环境变量**
-   - 替换为 Live 凭证
-   - 替换为 Live Plan IDs
-
-4. **不要提交 .env.local**
-   - 已添加到 .gitignore
-   - 只在部署平台配置
-
----
-
-## 📝 快速推送命令
-
-如果你有 GitHub Token，直接运行：
+### 2. 数据库迁移
 
 ```bash
 cd /root/.openclaw/workspace/zuhio-keyword-count-checker
 
-# 使用 token 推送（替换 YOUR_GITHUB_TOKEN）
-git push https://YOUR_GITHUB_TOKEN@github.com/lumaxiangshang/zuhio-keyword-count-checker.git main
+# 生成 Prisma 客户端
+npx prisma generate
+
+# 执行数据库迁移
+npx prisma migrate deploy
+```
+
+### 3. 创建订阅计划配置（可选）
+
+在数据库中插入订阅计划配置记录：
+
+```sql
+INSERT INTO "SubscriptionPlanConfig" ("planName", "billingCycle", "price", "currency", "paypalPlanId", "dailyLimit", "features", "isActive", "isPopular")
+VALUES 
+  ('PRO', 'MONTHLY', 9.99, 'USD', 'P-1AK67303R1503452TNHDOITQ', 999999, '["无限次关键词分析","导出 PDF/CSV","30 天历史记录","高级关键词密度报告","邮件支持"]', true, true),
+  ('PRO', 'YEARLY', 99, 'USD', 'P-9BF18630VW4069643NHDOITY', 999999, '["无限次关键词分析","导出 PDF/CSV","30 天历史记录","高级关键词密度报告","邮件支持","节省 17%"]', true, false);
 ```
 
 ---
 
-## 🎯 下一步
+## 🚀 部署到 Vercel
 
-1. **选择部署方式**
-   - Vercel（推荐，简单快速）
-   - Cloudflare Pages
-   - 其他平台
+### 方式 1：Git 自动部署（推荐）
 
-2. **配置环境变量**
-   - 复制 .env.local 中的所有变量
-   - 在部署平台配置
+```bash
+cd /root/.openclaw/workspace/zuhio-keyword-count-checker
 
-3. **测试支付**
-   - 使用沙盒账号测试
-   - 确认所有功能正常
+# 提交更改
+git add .
+git commit -m "feat: 纯订阅制重构 - 专注 Pro 计划 v2.0.0"
+git push origin main
+```
 
-4. **切换到生产环境**
-   - 创建 Live PayPal 凭证
-   - 更新环境变量
-   - 重新部署
+Vercel 会自动检测并部署。
+
+### 方式 2：Vercel CLI
+
+```bash
+# 安装 Vercel CLI（如果未安装）
+npm install -g vercel
+
+# 登录 Vercel
+vercel login
+
+# 部署（预览）
+vercel
+
+# 部署到生产环境
+vercel --prod
+```
+
+### 方式 3：Cloudflare Pages（备用）
+
+```bash
+# 安装 Wrangler CLI
+npm install -g wrangler
+
+# 登录 Cloudflare
+wrangler login
+
+# 部署到 Cloudflare Pages
+npx @cloudflare/next-on-pages
+wrangler pages deploy .vercel/output/static --project-name zuhio-keyword-count-checker
+```
 
 ---
 
-**当前提交哈希：** 5a4bd34  
-**提交时间：** 2026-03-28  
-**提交内容：** 完整的 PayPal 支付集成
+## 🔧 Vercel 环境变量配置
+
+在 Vercel Dashboard 中设置以下环境变量：
+
+**Production:**
+- `DATABASE_URL` - 生产数据库连接
+- `NEXT_PUBLIC_PAYPAL_CLIENT_ID` - PayPal Client ID
+- `PAYPAL_SECRET` - PayPal Secret
+- `PAYPAL_API_URL` - `https://api-m.paypal.com` (生产环境)
+- Firebase 系列变量
+- `NEXT_PUBLIC_BASE_URL` - `https://zuhio-keyword-count-checker.vercel.app`
+
+**Preview:**
+- 使用沙箱环境配置
+
+---
+
+## 🧪 部署后测试
+
+### 1. 基础功能测试
+- [ ] 首页关键词分析功能正常
+- [ ] 免费用户每日 3 次限制生效
+- [ ] 达到限制后显示升级弹窗
+
+### 2. 订阅流程测试
+- [ ] 定价页面显示正确（Free + Pro）
+- [ ] Pro Monthly ($9.99) 支付流程
+- [ ] Pro Yearly ($99) 支付流程
+- [ ] PayPal 支付成功回调
+- [ ] Dashboard 订阅状态更新
+
+### 3. Dashboard 测试
+- [ ] 订阅用户显示"∞"无限使用
+- [ ] 免费用户显示剩余次数
+- [ ] 订阅详情显示正确
+
+### 4. Webhook 测试（沙箱）
+
+```bash
+# 使用 PayPal Webhook 模拟器测试以下事件：
+- BILLING.SUBSCRIPTION.ACTIVATED
+- BILLING.SUBSCRIPTION.CANCELLED
+- BILLING.SUBSCRIPTION.EXPIRED
+- PAYMENT.CAPTURE.COMPLETED
+```
+
+---
+
+## 📊 上线后监控
+
+### 关键指标
+- 每日活跃用户数
+- 免费→Pro 转化率
+- 订阅取消率
+- 月收入 (MRR)
+
+### 日志监控
+```bash
+# Vercel 实时日志
+vercel logs --follow
+
+# 查看错误日志
+vercel logs --level=error
+```
+
+---
+
+## ⚠️ 生产环境注意事项
+
+### PayPal 配置
+1. **创建 Live App** - 在 PayPal Developer Dashboard
+2. **获取 Live Credentials** - Client ID + Secret
+3. **创建 Live 订阅计划** - 使用真实价格
+4. **配置 Webhook** - 指向生产 URL
+
+### 数据库备份
+```bash
+# 定期备份数据库
+pg_dump $DATABASE_URL > backup_$(date +%Y%m%d).sql
+```
+
+### 安全加固
+1. 启用 Vercel 防火墙
+2. 配置 CSP 头
+3. 启用速率限制
+4. 监控异常流量
+
+---
+
+## 🔄 回滚方案
+
+如果部署后发现问题：
+
+```bash
+# Vercel 回滚到上一个版本
+vercel rollback
+
+# 或回滚到特定部署
+vercel rollback [deployment-url]
+```
+
+---
+
+## 📞 支持
+
+遇到问题时：
+1. 检查 Vercel 部署日志
+2. 查看数据库连接状态
+3. 验证 PayPal 配置
+4. 联系技术支持
+
+---
+
+**最后更新：** 2026-03-30  
+**维护者：** 小璐 💼

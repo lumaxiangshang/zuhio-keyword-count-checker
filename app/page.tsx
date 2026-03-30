@@ -5,9 +5,12 @@ import Header from '@/components/Header';
 import Features from '@/components/Features';
 import SEOGuide from '@/components/SEOGuide';
 import VisitorCounter from '@/components/VisitorCounter';
-import UsageLimitAlert from '@/components/UsageLimitAlert';
 import { analyzeText, calculateKeywordDensity } from '@/lib/analyzer';
 import { translations, Language } from '@/lib/i18n';
+import paypalConfig from '@/lib/paypal-config';
+
+// 免费用户每日限制次数
+const FREE_DAILY_LIMIT = 3;
 
 export default function Home() {
   const [text, setText] = useState('');
@@ -15,34 +18,53 @@ export default function Home() {
   const [results, setResults] = useState<any>(null);
   const [density, setDensity] = useState(0);
   const [language, setLanguage] = useState<Language>('en');
+  
+  // 订阅状态
+  const [subscriptionPlan, setSubscriptionPlan] = useState<'FREE' | 'PRO' | 'BUSINESS'>('FREE');
+  const [subscriptionStatus, setSubscriptionStatus] = useState<'INACTIVE' | 'ACTIVE' | 'CANCELLED' | 'EXPIRED'>('INACTIVE');
+  const [dailyUsage, setDailyUsage] = useState(0);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
 
   const t = translations[language];
-  const [usageCount, setUsageCount] = useState(0);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const DAILY_LIMIT = 3;
 
+  // 初始化：检查订阅状态和使用记录
   useEffect(() => {
+    // 从 localStorage 获取用户信息
+    const user = localStorage.getItem('zuhio_user');
+    if (user) {
+      const userData = JSON.parse(user);
+      setUserEmail(userData.email || '');
+      setSubscriptionPlan(userData.subscriptionPlan || 'FREE');
+      setSubscriptionStatus(userData.subscriptionStatus || 'INACTIVE');
+    }
+
     // 从 localStorage 获取今日使用次数
     const today = new Date().toDateString();
     const stored = localStorage.getItem('zuhio_usage');
     if (stored) {
       const { date, count } = JSON.parse(stored);
       if (date === today) {
-        setUsageCount(count);
+        setDailyUsage(count);
       } else {
         // 新的一天，重置计数
         localStorage.setItem('zuhio_usage', JSON.stringify({ date: today, count: 0 }));
-        setUsageCount(0);
+        setDailyUsage(0);
       }
     } else {
       localStorage.setItem('zuhio_usage', JSON.stringify({ date: today, count: 0 }));
     }
   }, []);
 
+  // 分析文本
   useEffect(() => {
     if (text.trim()) {
       // 检查使用限制
-      if (usageCount >= DAILY_LIMIT) {
+      const isSubscribed = subscriptionStatus === 'ACTIVE' && (subscriptionPlan === 'PRO' || subscriptionPlan === 'BUSINESS');
+      const dailyLimit = isSubscribed ? 999999 : FREE_DAILY_LIMIT;
+
+      if (dailyUsage >= dailyLimit) {
         setShowUpgradeModal(true);
         return;
       }
@@ -55,14 +77,14 @@ export default function Home() {
 
       // 增加使用次数
       const today = new Date().toDateString();
-      const newCount = usageCount + 1;
+      const newCount = dailyUsage + 1;
       localStorage.setItem('zuhio_usage', JSON.stringify({ date: today, count: newCount }));
-      setUsageCount(newCount);
+      setDailyUsage(newCount);
     } else {
       setResults(null);
       setDensity(0);
     }
-  }, [text, keyword]);
+  }, [text, keyword, dailyUsage, subscriptionPlan, subscriptionStatus]);
 
   const getDensityStatus = (value: number) => {
     if (value < 0.5) return { text: t.densityTooLow, color: 'text-red-600' };
@@ -75,6 +97,14 @@ export default function Home() {
   const handleLanguageChange = (lang: Language) => {
     setLanguage(lang);
   };
+
+  const handleUpgrade = (planKey: keyof typeof paypalConfig.plans) => {
+    // 重定向到定价页面
+    window.location.href = `/pricing?plan=${planKey}`;
+  };
+
+  const remainingUses = Math.max(0, FREE_DAILY_LIMIT - dailyUsage);
+  const isSubscribed = subscriptionStatus === 'ACTIVE' && (subscriptionPlan === 'PRO' || subscriptionPlan === 'BUSINESS');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-purple-800">
@@ -90,6 +120,29 @@ export default function Home() {
             <p className="text-xl text-white/80 max-w-3xl mx-auto">
               {t.heroDescription}
             </p>
+            
+            {/* 订阅状态提示 */}
+            <div className="mt-6 flex items-center justify-center gap-4">
+              {isSubscribed ? (
+                <div className="px-4 py-2 bg-green-500/20 backdrop-blur-sm rounded-full text-white text-sm">
+                  ✨ {subscriptionPlan} {language === 'zh' ? '计划' : 'Plan'} - {language === 'zh' ? '无限使用' : 'Unlimited Usage'}
+                </div>
+              ) : (
+                <div className="px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-white text-sm">
+                  📊 {language === 'zh' ? `今日剩余：${remainingUses} 次` : `Remaining Today: ${remainingUses}`}
+                </div>
+              )}
+              
+              {!isSubscribed && (
+                <button
+                  onClick={() => window.location.href = '/pricing'}
+                  className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-full text-sm font-medium transition-colors"
+                >
+                  {language === 'zh' ? '升级无限使用 →' : 'Upgrade for Unlimited →'}
+                </button>
+              )}
+            </div>
+            
             {/* SEO Keywords Bar */}
             <div className="mt-6 flex flex-wrap justify-center gap-2 text-sm text-white/60">
               <span className="px-3 py-1 bg-white/10 rounded-full">Free Keyword Density Checker</span>
@@ -98,9 +151,6 @@ export default function Home() {
               <span className="px-3 py-1 bg-white/10 rounded-full">Content Optimizer</span>
             </div>
           </div>
-
-          {/* Usage Limit Alert */}
-          <UsageLimitAlert used={7} limit={10} plan="free" />
 
           {/* Main Analyzer */}
           <div className="bg-white rounded-2xl shadow-2xl p-8 mb-8">
@@ -225,6 +275,35 @@ export default function Home() {
             </div>
           )}
 
+          {/* Pricing CTA */}
+          {!isSubscribed && (
+            <div className="mt-12 bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl shadow-xl p-8 text-center text-white">
+              <h2 className="text-3xl font-bold mb-4">
+                {language === 'zh' ? '🚀 升级 Pro，解锁无限使用！' : '🚀 Upgrade to Pro for Unlimited!'}
+              </h2>
+              <p className="text-lg mb-6 opacity-90">
+                {language === 'zh' 
+                  ? `每天免费 ${FREE_DAILY_LIMIT} 次，Pro 无限使用 + 导出功能` 
+                  : `Free ${FREE_DAILY_LIMIT} uses/day. Pro = Unlimited + Export`}
+              </p>
+              <div className="flex flex-wrap justify-center gap-4">
+                <button
+                  onClick={() => handleUpgrade('proMonthly')}
+                  className="px-8 py-4 bg-white text-purple-600 rounded-xl font-bold text-lg hover:bg-gray-100 transition-colors"
+                >
+                  $9.99/{language === 'zh' ? '月' : 'mo'}
+                </button>
+                <button
+                  onClick={() => handleUpgrade('proYearly')}
+                  className="px-8 py-4 bg-purple-800 text-white rounded-xl font-bold text-lg hover:bg-purple-900 transition-colors border-2 border-white/30"
+                >
+                  $99/{language === 'zh' ? '年' : 'yr'} 
+                  <span className="ml-2 text-sm opacity-80">{language === 'zh' ? '省 17%' : 'Save 17%'}</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Features Section */}
           <div className="mt-16">
             <Features language={language} />
@@ -272,7 +351,7 @@ export default function Home() {
                     </ul>
                     <h3 className="text-xl font-bold text-white mt-6 mb-3">🌐 多语言支持</h3>
                     <p>
-                      支持<strong>中文简体</strong>和<strong>English</strong>，
+                      支持<strong>简体中文</strong>和<strong>English</strong>，
                       适合全球内容创作者、SEO 专家、数字营销人员使用。
                     </p>
                   </div>
@@ -283,7 +362,7 @@ export default function Home() {
                     <h3 className="text-xl font-bold text-white mb-3">🎯 Professional SEO Tool</h3>
                     <p className="mb-4">
                       Zuhio is a professional <strong>keyword density checker</strong> and 
-                      <strong> word count tool</strong> for SEO optimization. Improve your 
+                      <strong>word count tool</strong> for SEO optimization. Improve your 
                       Google rankings with our free online analyzer. No registration required.
                     </p>
                     <h3 className="text-xl font-bold text-white mb-3">📊 Real-time Analysis</h3>
@@ -397,6 +476,46 @@ export default function Home() {
           </footer>
         </div>
       </main>
+
+      {/* Upgrade Modal */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+            <div className="text-center">
+              <div className="text-6xl mb-4">🎯</div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">
+                {language === 'zh' ? '今日免费次数已用完' : 'Free Daily Limit Reached'}
+              </h3>
+              <p className="text-gray-600 mb-6">
+                {language === 'zh' 
+                  ? `升级 Pro 解锁无限使用 + 高级功能` 
+                  : 'Upgrade to Pro for unlimited usage + premium features'}
+              </p>
+              <div className="space-y-3">
+                <button
+                  onClick={() => handleUpgrade('proMonthly')}
+                  className="w-full px-6 py-3 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 transition-colors"
+                >
+                  $9.99/{language === 'zh' ? '月' : 'mo'} - Pro
+                </button>
+                <button
+                  onClick={() => handleUpgrade('proYearly')}
+                  className="w-full px-6 py-3 bg-purple-800 text-white rounded-xl font-medium hover:bg-purple-900 transition-colors"
+                >
+                  $99/{language === 'zh' ? '年' : 'yr'} - Pro 
+                  <span className="ml-2 text-sm opacity-80">{language === 'zh' ? '省 17%' : 'Save 17%'}</span>
+                </button>
+                <button
+                  onClick={() => setShowUpgradeModal(false)}
+                  className="w-full px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
+                >
+                  {language === 'zh' ? '稍后再说' : 'Maybe Later'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

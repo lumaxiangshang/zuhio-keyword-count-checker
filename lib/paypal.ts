@@ -1,128 +1,115 @@
-// PayPal 配置
-// 需要在 PayPal Developer 创建账号并获取凭证
-// 1. 访问 https://developer.paypal.com
-// 2. 创建 App
-// 3. 获取 Client ID 和 Secret
+// PayPal SDK - 纯订阅制
+import paypalConfig, { type PlanKey } from './paypal-config';
 
-export const paypalConfig = {
-  // 测试环境（Sandbox）
-  clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || 'YOUR_PAYPAL_CLIENT_ID',
-  secret: process.env.PAYPAL_SECRET || 'YOUR_PAYPAL_SECRET',
+/**
+ * 初始化 PayPal SDK
+ */
+export const initializePayPal = () => {
+  if (typeof window === 'undefined') return null;
   
-  // API 端点
-  baseUrl: process.env.NODE_ENV === 'production'
-    ? 'https://api-m.paypal.com'
-    : 'https://api-m.sandbox.paypal.com',
+  // PayPal SDK 会通过 script 标签加载
+  // @ts-ignore - PayPal 全局对象
+  return window.paypal;
+};
+
+/**
+ * 创建订阅按钮配置
+ */
+export const createSubscriptionConfig = (planKey: PlanKey, onSuccess?: (subscriptionId: string) => void) => {
+  const plan = paypalConfig.plans[planKey];
   
-  // 价格配置
-  prices: {
-    pro: {
-      monthly: {
-        id: 'pro_monthly',
-        price: 9.99,
-        currency: 'USD',
-        interval: 'month',
-        intervalCount: 1,
-      },
-      yearly: {
-        id: 'pro_yearly',
-        price: 99,
-        currency: 'USD',
-        interval: 'year',
-        intervalCount: 1,
-      },
+  return {
+    style: {
+      label: 'subscribe',
+      color: 'gold',
+      layout: 'vertical',
+      shape: 'rect',
     },
-    business: {
-      monthly: {
-        id: 'business_monthly',
-        price: 29.99,
-        currency: 'USD',
-        interval: 'month',
-        intervalCount: 1,
-      },
-      yearly: {
-        id: 'business_yearly',
-        price: 299,
-        currency: 'USD',
-        interval: 'year',
-        intervalCount: 1,
-      },
+    createSubscription: (data: any, actions: any) => {
+      return actions.subscription.create({
+        plan_id: plan.id,
+      });
     },
-  },
+    onApprove: (data: any, actions: any) => {
+      // 订阅批准后的回调
+      const subscriptionId = data.subscriptionID;
+      console.log('✅ Subscription approved:', subscriptionId);
+      
+      // 调用后端 API 激活订阅
+      return fetch('/api/subscription/activate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subscriptionId,
+          planKey,
+        }),
+      })
+        .then(res => res.json())
+        .then(result => {
+          if (result.success && onSuccess) {
+            onSuccess(subscriptionId);
+          }
+          return result;
+        })
+        .catch(error => {
+          console.error('❌ Subscription activation error:', error);
+          throw error;
+        });
+    },
+    onError: (err: any) => {
+      console.error('❌ PayPal Subscription Error:', err);
+    },
+  };
 };
 
-// 创建 PayPal 订单
-export const createPayPalOrder = async ({
-  planId,
-  userId,
-  returnUrl,
-  cancelUrl,
-}: {
-  planId: string;
-  userId: string;
-  returnUrl: string;
-  cancelUrl: string;
-}) => {
+/**
+ * 获取订阅状态
+ */
+export const getSubscriptionStatus = async (subscriptionId: string) => {
   try {
-    const response = await fetch('/api/paypal/create-order', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        planId,
-        userId,
-        returnUrl,
-        cancelUrl,
-      }),
-    });
-
-    const data = await response.json();
-    
-    if (data.approvalUrl) {
-      // 重定向用户到 PayPal 审批页面
-      window.location.href = data.approvalUrl;
-    }
-    
-    return { orderId: data.orderId, approvalUrl: data.approvalUrl, error: null };
-  } catch (error: any) {
-    console.error('PayPal Order Creation Error:', error);
-    return { orderId: null, approvalUrl: null, error: error.message };
-  }
-};
-
-// 捕获 PayPal 订单（用户批准后）
-export const capturePayPalOrder = async (orderId: string) => {
-  try {
-    const response = await fetch('/api/paypal/capture-order', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orderId }),
-    });
-
-    const data = await response.json();
-    return { 
-      success: data.success, 
-      subscriptionId: data.subscriptionId,
-      error: data.error 
-    };
-  } catch (error: any) {
-    console.error('PayPal Order Capture Error:', error);
-    return { success: false, subscriptionId: null, error: error.message };
-  }
-};
-
-// 取消订阅
-export const cancelSubscription = async (subscriptionId: string) => {
-  try {
-    const response = await fetch('/api/paypal/cancel-subscription', {
+    const response = await fetch('/api/subscription/status', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ subscriptionId }),
     });
-
+    
     const data = await response.json();
-    return { success: data.success, error: data.error };
+    return data;
   } catch (error: any) {
-    console.error('PayPal Subscription Cancellation Error:', error);
+    console.error('Get subscription status error:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * 取消订阅
+ */
+export const cancelSubscription = async (subscriptionId: string, reason?: string) => {
+  try {
+    const response = await fetch('/api/subscription/cancel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscriptionId, reason }),
+    });
+    
+    const data = await response.json();
+    return data;
+  } catch (error: any) {
+    console.error('Cancel subscription error:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * 获取用户当前订阅
+ */
+export const getUserSubscription = async () => {
+  try {
+    const response = await fetch('/api/subscription/me');
+    const data = await response.json();
+    return data;
+  } catch (error: any) {
+    console.error('Get user subscription error:', error);
     return { success: false, error: error.message };
   }
 };

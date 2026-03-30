@@ -1,70 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import PayPalCheckout from '@/components/PayPalCheckout';
-import paypalConfig from '@/lib/paypal-config';
+import paypalConfig, { type PlanKey } from '@/lib/paypal-config';
 
 export default function PricingPage() {
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const router = useRouter();
+  const [billingCycle, setBillingCycle] = useState<'MONTHLY' | 'YEARLY'>('MONTHLY');
 
-  // 使用硬编码的配置（静态导出需要）
-  const plans = paypalConfig.plans;
-  // 不需要加载状态，配置已经硬编码
-  const loading = false;
-
-  const planData = [
-    {
-      name: 'Free',
-      price: 0,
-      description: 'Perfect for trying out Zuhio',
-      features: [
-        { text: '3 analyses per day', included: true },
-        { text: 'Basic keyword density', included: true },
-        { text: 'Word count statistics', included: true },
-        { text: 'No history', included: false },
-        { text: 'No export', included: false },
-        { text: 'No bulk analysis', included: false },
-      ],
-      cta: 'Start Free',
-      highlighted: false,
-      getPlanId: () => null,
-    },
-    {
-      name: 'Pro',
-      price: billingCycle === 'monthly' ? 9.99 : 99,
-      priceNote: billingCycle === 'yearly' ? 'Save 17%' : '',
-      description: 'For content creators and SEO professionals',
-      features: [
-        { text: 'Unlimited analyses', included: true },
-        { text: 'Export reports (PDF/CSV)', included: true },
-        { text: '30-day history', included: true },
-        { text: 'Bulk analysis (5 articles)', included: true },
-        { text: 'Keyword templates', included: true },
-        { text: 'Priority support', included: true },
-      ],
-      cta: 'Subscribe with PayPal',
-      highlighted: true,
-      getPlanId: () => plans ? (billingCycle === 'monthly' ? plans.proMonthly : plans.proYearly) : '',
-    },
-    {
-      name: 'Business',
-      price: billingCycle === 'monthly' ? 29.99 : 299,
-      priceNote: billingCycle === 'yearly' ? 'Save 17%' : '',
-      description: 'For teams and agencies',
-      features: [
-        { text: 'Everything in Pro', included: true },
-        { text: 'API access (1000/mo)', included: true },
-        { text: 'Team collaboration (5 seats)', included: true },
-        { text: 'Unlimited history', included: true },
-        { text: 'White-label reports', included: true },
-        { text: 'Dedicated support', included: true },
-      ],
-      cta: 'Contact Sales',
-      highlighted: false,
-      getPlanId: () => plans ? (billingCycle === 'monthly' ? plans.businessMonthly : plans.businessYearly) : '',
-    },
-  ];
+  const handleSubscribe = (planKey: PlanKey) => {
+    // 重定向到订阅创建流程
+    router.push(`/checkout?plan=${planKey}`);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
@@ -81,7 +29,6 @@ export default function PricingPage() {
             <nav className="flex items-center gap-6">
               <a href="/" className="text-sm text-gray-600 hover:text-gray-800">Home</a>
               <a href="/dashboard" className="text-sm text-gray-600 hover:text-gray-800">Dashboard</a>
-              <a href="/credits" className="text-sm text-gray-600 hover:text-gray-800">Buy Credits</a>
               <Link href="/dashboard" className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700">
                 Sign In
               </Link>
@@ -97,117 +44,70 @@ export default function PricingPage() {
             Simple, Transparent Pricing
           </h1>
           <p className="text-xl text-gray-600 mb-8">
-            Choose the plan that fits your needs
+            Start free, upgrade when you need more
           </p>
 
           {/* Billing Toggle */}
           <div className="flex items-center justify-center gap-4 mb-8">
-            <span className={`text-sm font-medium ${billingCycle === 'monthly' ? 'text-gray-900' : 'text-gray-500'}`}>
+            <span className={`text-sm font-medium ${billingCycle === 'MONTHLY' ? 'text-gray-900' : 'text-gray-500'}`}>
               Monthly
             </span>
             <button
-              onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
+              onClick={() => setBillingCycle(billingCycle === 'MONTHLY' ? 'YEARLY' : 'MONTHLY')}
               className="w-14 h-8 bg-purple-600 rounded-full relative transition-colors"
             >
               <div className={`w-6 h-6 bg-white rounded-full absolute top-1 transition-transform ${
-                billingCycle === 'yearly' ? 'left-7' : 'left-1'
+                billingCycle === 'YEARLY' ? 'left-7' : 'left-1'
               }`}></div>
             </button>
-            <span className={`text-sm font-medium ${billingCycle === 'yearly' ? 'text-gray-900' : 'text-gray-500'}`}>
+            <span className={`text-sm font-medium ${billingCycle === 'YEARLY' ? 'text-gray-900' : 'text-gray-500'}`}>
               Yearly <span className="text-green-600 text-xs ml-1">Save 17%</span>
             </span>
           </div>
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-          {planData.map((plan) => (
-            <div
-              key={plan.name}
-              className={`relative bg-white rounded-2xl p-8 ${
-                plan.highlighted
-                  ? 'shadow-2xl border-2 border-purple-500 scale-105'
-                  : 'shadow-lg border border-gray-200'
-              }`}
-            >
-              {plan.highlighted && (
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <span className="bg-gradient-to-r from-purple-600 to-blue-600 text-white text-sm font-bold px-4 py-1 rounded-full">
-                    Most Popular
-                  </span>
-                </div>
-              )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-16">
+          {/* Free Plan */}
+          <PricingCard
+            name="Free"
+            price={0}
+            billingCycle={billingCycle}
+            description="Perfect for trying out Zuhio"
+            features={[
+              { text: '3 analyses per day', included: true },
+              { text: 'Basic keyword density', included: true },
+              { text: 'Word count statistics', included: true },
+              { text: 'Export reports', included: false },
+              { text: 'History tracking', included: false },
+            ]}
+            cta="Start Free"
+            highlighted={false}
+            onSelect={() => router.push('/')}
+          />
 
-              <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
-                <div className="flex items-baseline justify-center gap-1 mb-2">
-                  <span className="text-5xl font-bold text-gray-900">
-                    ${plan.price}
-                  </span>
-                  {plan.price > 0 && (
-                    <span className="text-gray-500">/{billingCycle === 'monthly' ? 'month' : 'year'}</span>
-                  )}
-                </div>
-                {plan.priceNote && (
-                  <p className="text-green-600 text-sm font-medium">{plan.priceNote}</p>
-                )}
-                <p className="text-gray-600 text-sm">{plan.description}</p>
-              </div>
-
-              <ul className="space-y-4 mb-8">
-                {plan.features.map((feature, index) => (
-                  <li key={index} className="flex items-start gap-3">
-                    <span className={`text-lg ${feature.included ? 'text-green-500' : 'text-gray-300'}`}>
-                      {feature.included ? '✓' : '✗'}
-                    </span>
-                    <span className={`text-sm ${feature.included ? 'text-gray-700' : 'text-gray-400 line-through'}`}>
-                      {feature.text}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-
-              {plan.name === 'Free' ? (
-                <Link
-                  href="/"
-                  className={`block w-full py-3 text-center rounded-lg font-bold transition-colors ${
-                    plan.highlighted
-                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:opacity-90'
-                      : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                  }`}
-                >
-                  {plan.cta}
-                </Link>
-              ) : plan.name === 'Business' ? (
-                <a
-                  href="mailto:sales@zuhio.com"
-                  className={`block w-full py-3 text-center rounded-lg font-bold transition-colors ${
-                    plan.highlighted
-                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:opacity-90'
-                      : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                  }`}
-                >
-                  {plan.cta}
-                </a>
-              ) : (
-                <div>
-                  {loading ? (
-                    <div className="flex items-center justify-center p-4">
-                      <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
-                    </div>
-                  ) : (
-                    <PayPalCheckout
-                      planId={plan.getPlanId() || ''}
-                      planName={plan.name}
-                      price={plan.price}
-                      billingCycle={billingCycle}
-                    />
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
+          {/* Pro Plan */}
+          <PricingCard
+            name="Pro"
+            price={billingCycle === 'MONTHLY' ? 9.99 : 99}
+            billingCycle={billingCycle}
+            description="For content creators and SEO professionals"
+            features={[
+              { text: 'Unlimited analyses', included: true },
+              { text: 'Export PDF/CSV', included: true },
+              { text: '30-day history', included: true },
+              { text: 'Advanced reports', included: true },
+              { text: 'Email support', included: true },
+            ]}
+            cta={billingCycle === 'MONTHLY' ? '$9.99/month' : '$99/year'}
+            highlighted={true}
+            savings={billingCycle === 'YEARLY' ? 'Save 17% (2 months free!)' : undefined}
+            onSelect={() => handleSubscribe(billingCycle === 'MONTHLY' ? 'proMonthly' : 'proYearly')}
+          />
         </div>
+
+        {/* Feature Comparison */}
+        <FeatureComparison />
 
         {/* FAQ Section */}
         <FAQSection />
@@ -217,7 +117,7 @@ export default function PricingPage() {
           <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl p-12 text-white">
             <h2 className="text-3xl font-bold mb-4">Ready to boost your SEO?</h2>
             <p className="text-white/80 mb-8 text-lg">
-              Start with 10 free analyses per day. No credit card required.
+              Start with 3 free analyses per day. No credit card required.
             </p>
             <Link
               href="/"
@@ -232,47 +132,148 @@ export default function PricingPage() {
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12 mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-2xl">🔍</span>
-                <span className="font-bold text-xl">Zuhio</span>
-              </div>
-              <p className="text-gray-400 text-sm">
-                Free online keyword density checker and SEO optimization tool.
-              </p>
-            </div>
-            <div>
-              <h4 className="font-bold mb-4">Product</h4>
-              <ul className="space-y-2 text-gray-400 text-sm">
-                <li><a href="/" className="hover:text-white">Features</a></li>
-                <li><a href="/pricing" className="hover:text-white">Pricing</a></li>
-                <li><a href="/credits" className="hover:text-white">Buy Credits</a></li>
-                <li><a href="/dashboard" className="hover:text-white">Dashboard</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-bold mb-4">Company</h4>
-              <ul className="space-y-2 text-gray-400 text-sm">
-                <li><a href="#" className="hover:text-white">About</a></li>
-                <li><a href="#" className="hover:text-white">Blog</a></li>
-                <li><a href="#" className="hover:text-white">Contact</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-bold mb-4">Legal</h4>
-              <ul className="space-y-2 text-gray-400 text-sm">
-                <li><a href="#" className="hover:text-white">Privacy</a></li>
-                <li><a href="#" className="hover:text-white">Terms</a></li>
-                <li><a href="#" className="hover:text-white">Cookie Policy</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400 text-sm">
-            © 2026 Zuhio. All rights reserved.
+          <div className="text-center text-gray-400 text-sm">
+            <p>© 2026 Zuhio. All rights reserved.</p>
+            <p className="mt-2">Free keyword density checker and SEO optimization tool.</p>
           </div>
         </div>
       </footer>
+    </div>
+  );
+}
+
+// Pricing Card Component
+function PricingCard({
+  name,
+  price,
+  billingCycle,
+  description,
+  features,
+  cta,
+  highlighted,
+  savings,
+  onSelect,
+}: {
+  name: string;
+  price: number;
+  billingCycle: 'MONTHLY' | 'YEARLY';
+  description: string;
+  features: Array<{ text: string; included: boolean }>;
+  cta: string;
+  highlighted?: boolean;
+  savings?: string;
+  onSelect: () => void;
+}) {
+  return (
+    <div
+      className={`relative bg-white rounded-2xl p-8 ${
+        highlighted
+          ? 'shadow-2xl border-2 border-purple-500 scale-105'
+          : 'shadow-lg border border-gray-200'
+      }`}
+    >
+      {highlighted && (
+        <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+          <span className="bg-gradient-to-r from-purple-600 to-blue-600 text-white text-sm font-bold px-4 py-1 rounded-full">
+            Most Popular
+          </span>
+        </div>
+      )}
+
+      <div className="text-center mb-6">
+        <h3 className="text-2xl font-bold text-gray-900 mb-2">{name}</h3>
+        <div className="flex items-baseline justify-center gap-1 mb-2">
+          {price > 0 ? (
+            <>
+              <span className="text-5xl font-bold text-gray-900">
+                ${price}
+              </span>
+              <span className="text-gray-500">/{billingCycle === 'MONTHLY' ? 'month' : 'year'}</span>
+            </>
+          ) : (
+            <span className="text-5xl font-bold text-gray-900">Free</span>
+          )}
+        </div>
+        {savings && (
+          <p className="text-green-600 text-sm font-medium">{savings}</p>
+        )}
+        <p className="text-gray-600 text-sm">{description}</p>
+      </div>
+
+      <ul className="space-y-4 mb-8">
+        {features.map((feature, index) => (
+          <li key={index} className="flex items-start gap-3">
+            <span className={`text-lg ${feature.included ? 'text-green-500' : 'text-gray-300'}`}>
+              {feature.included ? '✓' : '✗'}
+            </span>
+            <span className={`text-sm ${feature.included ? 'text-gray-700' : 'text-gray-400'}`}>
+              {feature.text}
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      <button
+        onClick={onSelect}
+        className={`w-full py-3 text-center rounded-lg font-bold transition-colors ${
+          highlighted
+            ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:opacity-90'
+            : name === 'Free'
+            ? 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+            : 'bg-purple-600 text-white hover:bg-purple-700'
+        }`}
+      >
+        {cta}
+      </button>
+    </div>
+  );
+}
+
+// Feature Comparison
+function FeatureComparison() {
+  return (
+    <div className="max-w-4xl mx-auto mb-16">
+      <h2 className="text-3xl font-bold text-center text-gray-900 mb-8">
+        Compare Features
+      </h2>
+      <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="text-left py-4 px-6 font-semibold text-gray-700">Feature</th>
+              <th className="text-center py-4 px-6 font-semibold text-gray-700">Free</th>
+              <th className="text-center py-4 px-6 font-semibold text-purple-600 bg-purple-50">Pro</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-t border-gray-200">
+              <td className="py-4 px-6 font-medium text-gray-900">Daily Analyses</td>
+              <td className="text-center py-4 px-6 text-gray-600">3</td>
+              <td className="text-center py-4 px-6 font-medium text-purple-600 bg-purple-50">Unlimited</td>
+            </tr>
+            <tr className="border-t border-gray-200 bg-gray-50">
+              <td className="py-4 px-6 font-medium text-gray-900">Keyword Density</td>
+              <td className="text-center py-4 px-6 text-gray-600">Basic</td>
+              <td className="text-center py-4 px-6 font-medium text-purple-600 bg-purple-50">Advanced</td>
+            </tr>
+            <tr className="border-t border-gray-200">
+              <td className="py-4 px-6 font-medium text-gray-900">Export Reports</td>
+              <td className="text-center py-4 px-6 text-gray-600">✗</td>
+              <td className="text-center py-4 px-6 font-medium text-purple-600 bg-purple-50">✓ PDF/CSV</td>
+            </tr>
+            <tr className="border-t border-gray-200 bg-gray-50">
+              <td className="py-4 px-6 font-medium text-gray-900">History Tracking</td>
+              <td className="text-center py-4 px-6 text-gray-600">✗</td>
+              <td className="text-center py-4 px-6 font-medium text-purple-600 bg-purple-50">✓ 30 days</td>
+            </tr>
+            <tr className="border-t border-gray-200">
+              <td className="py-4 px-6 font-medium text-gray-900">Support</td>
+              <td className="text-center py-4 px-6 text-gray-600">Community</td>
+              <td className="text-center py-4 px-6 font-medium text-purple-600 bg-purple-50">Email</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -288,7 +289,7 @@ function FAQSection() {
     },
     {
       question: 'What payment methods do you accept?',
-      answer: 'We accept all major credit cards (Visa, Mastercard, Amex), PayPal, and Apple Pay.',
+      answer: 'We accept PayPal and all major credit cards through our secure payment processor.',
     },
     {
       question: 'Can I cancel my subscription?',
@@ -300,19 +301,15 @@ function FAQSection() {
     },
     {
       question: 'What\'s the difference between monthly and yearly billing?',
-      answer: 'Yearly billing saves you 17% compared to monthly billing. It\'s like getting 2 months free!',
+      answer: 'Yearly billing saves you 17% compared to monthly billing. That\'s like getting 2 months free!',
     },
     {
       question: 'Can I switch plans later?',
-      answer: 'Absolutely! You can upgrade or downgrade your plan anytime from your account settings.',
-    },
-    {
-      question: 'Do you offer discounts for nonprofits or students?',
-      answer: 'Yes! Contact our sales team for special pricing for nonprofits, students, and educational institutions.',
+      answer: 'Absolutely! You can upgrade or downgrade your plan anytime from your dashboard.',
     },
     {
       question: 'What happens if I exceed my daily limit?',
-      answer: 'Free users can upgrade to Pro for unlimited analyses. Your data is saved, so you can continue where you left off.',
+      answer: 'Free users are limited to 3 analyses per day. Upgrade to Pro for unlimited analyses.',
     },
   ];
 
