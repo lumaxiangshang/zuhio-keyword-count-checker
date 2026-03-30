@@ -110,7 +110,6 @@ export async function GET(request: NextRequest) {
         image: true,
         subscriptionPlan: true,
         subscriptionStatus: true,
-        subscriptionEndDate: true,
         createdAt: true,
         todayUsage: true,
         lastUsageDate: true,
