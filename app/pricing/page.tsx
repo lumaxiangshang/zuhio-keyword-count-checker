@@ -1,22 +1,42 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { User as FirebaseUser } from 'firebase/auth';
 import Link from 'next/link';
 import paypalConfig, { type PlanKey } from '@/lib/paypal-config';
 
 export default function PricingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [user, setUser] = useState<FirebaseUser | null>(null);
   const [billingCycle, setBillingCycle] = useState<'MONTHLY' | 'YEARLY'>('MONTHLY');
+  const [loading, setLoading] = useState(true);
 
   const handleSubscribe = (planKey: PlanKey) => {
-    // 重定向到订阅创建流程
+    if (!user) {
+      // 未登录，重定向到首页登录
+      router.push('/?login=true');
+      return;
+    }
+    // 已登录，跳转到结账页面
     router.push(`/checkout?plan=${planKey}`);
   };
 
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
-      {/* Header */}
+      {/* Header with Login Status */}
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -28,10 +48,27 @@ export default function PricingPage() {
             </Link>
             <nav className="flex items-center gap-6">
               <a href="/" className="text-sm text-gray-600 hover:text-gray-800">Home</a>
-              <a href="/dashboard" className="text-sm text-gray-600 hover:text-gray-800">Dashboard</a>
-              <Link href="/dashboard" className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700">
-                Sign In
-              </Link>
+              {user ? (
+                <>
+                  <Link href="/dashboard" className="text-sm text-purple-600 font-medium hover:text-purple-700">
+                    Dashboard
+                  </Link>
+                  {user.photoURL && (
+                    <img
+                      src={user.photoURL}
+                      alt={user.displayName || 'User'}
+                      className="w-8 h-8 rounded-full border-2 border-purple-200"
+                    />
+                  )}
+                  <span className="text-sm text-gray-600 hidden sm:block">
+                    {user.displayName || user.email?.split('@')[0]}
+                  </span>
+                </>
+              ) : (
+                <Link href="/?login=true" className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700">
+                  Sign In
+                </Link>
+              )}
             </nav>
           </div>
         </div>
@@ -103,6 +140,7 @@ export default function PricingPage() {
             highlighted={true}
             savings={billingCycle === 'YEARLY' ? 'Save 17% (2 months free!)' : undefined}
             onSelect={() => handleSubscribe(billingCycle === 'MONTHLY' ? 'proMonthly' : 'proYearly')}
+            user={user}
           />
         </div>
 
@@ -153,6 +191,7 @@ function PricingCard({
   highlighted,
   savings,
   onSelect,
+  user,
 }: {
   name: string;
   price: number;
@@ -163,6 +202,7 @@ function PricingCard({
   highlighted?: boolean;
   savings?: string;
   onSelect: () => void;
+  user: any;
 }) {
   return (
     <div
@@ -225,6 +265,12 @@ function PricingCard({
       >
         {cta}
       </button>
+      
+      {!user && highlighted && (
+        <p className="text-center text-xs text-gray-500 mt-3">
+          🔒 Sign in required to subscribe
+        </p>
+      )}
     </div>
   );
 }
