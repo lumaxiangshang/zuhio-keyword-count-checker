@@ -53,9 +53,8 @@ export async function POST(request: NextRequest) {
           name: displayName,
           image: photoURL,
           emailVerified: emailVerified ? new Date() : null,
-          credits: 10, // 新用户赠送 10 积分
-          subscriptionPlan: 'FREE' as any, // 枚举类型
-          subscriptionStatus: 'INACTIVE' as any, // 枚举类型
+          subscriptionPlan: 'FREE',
+          subscriptionStatus: 'INACTIVE',
         },
       });
     }
@@ -69,7 +68,6 @@ export async function POST(request: NextRequest) {
         email: user.email,
         name: user.name,
         image: user.image,
-        credits: user.credits,
         subscriptionPlan: user.subscriptionPlan,
         subscriptionStatus: user.subscriptionStatus,
       },
@@ -110,11 +108,12 @@ export async function GET(request: NextRequest) {
         email: true,
         name: true,
         image: true,
-        credits: true,
         subscriptionPlan: true,
         subscriptionStatus: true,
         subscriptionEndDate: true,
         createdAt: true,
+        todayUsage: true,
+        lastUsageDate: true,
       },
     });
 
