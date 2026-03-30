@@ -26,7 +26,12 @@ export default function DashboardPage() {
       
       // 获取用户完整信息（包括订阅）
       fetch(`/api/user/me`)
-        .then(res => res.json())
+        .then(res => {
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+          }
+          return res.json();
+        })
         .then(data => {
           if (data.success) {
             setDbUser(data.user);
@@ -34,7 +39,14 @@ export default function DashboardPage() {
             setUsageStats(data.usageStats || { today: 0, total: 0, limit: 0 });
           }
         })
-        .catch(err => console.error('Get user error:', err))
+        .catch(err => {
+          console.error('Get user error:', err);
+          // 如果 API 不存在，使用本地数据
+          setDbUser({
+            subscriptionPlan: 'FREE',
+            subscriptionStatus: 'INACTIVE',
+          });
+        })
         .finally(() => setLoading(false));
     });
 

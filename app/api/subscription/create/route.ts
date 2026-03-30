@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import paypalConfig from '@/lib/paypal-config';
 
 const prisma = new PrismaClient();
-const PAYPAL_BASE_URL = paypalConfig.apiUrl;
+const PAYPAL_BASE_URL = process.env.PAYPAL_API_URL || paypalConfig.apiUrl;
 
 /**
  * 获取 PayPal Access Token
@@ -43,17 +43,31 @@ export async function POST(request: NextRequest) {
   console.log(`[${reqId}] Create Subscription - Request received`);
 
   try {
+    // 检查环境变量
+    const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
+    const secret = process.env.PAYPAL_SECRET;
+    
+    if (!clientId || !secret) {
+      console.error(`[${reqId}] Missing PayPal credentials`);
+      return NextResponse.json(
+        { success: false, error: 'PayPal configuration missing. Please contact support.' },
+        { status: 500 }
+      );
+    }
+
     const { planKey, userEmail } = await request.json();
 
     // 验证计划
     if (!planKey || !paypalConfig.plans[planKey as keyof typeof paypalConfig.plans]) {
+      console.error(`[${reqId}] Invalid plan:`, planKey);
       return NextResponse.json(
-        { success: false, error: 'Invalid plan' },
+        { success: false, error: 'Invalid plan selected' },
         { status: 400 }
       );
     }
 
     if (!userEmail) {
+      console.error(`[${reqId}] Missing email`);
       return NextResponse.json(
         { success: false, error: 'Email is required' },
         { status: 400 }
