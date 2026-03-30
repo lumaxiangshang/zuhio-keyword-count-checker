@@ -18,10 +18,12 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     // 动态导入 Firebase（只在客户端运行）
+    let unsubscribe: (() => void) | null = null;
+    
     const initAuth = async () => {
-      const { auth, onAuthStateChanged } = await import('@/lib/firebase');
+      const { onAuthChange } = await import('@/lib/firebase');
       
-      const unsubscribe = onAuthStateChanged(auth, (firebaseUser: any) => {
+      unsubscribe = onAuthChange((firebaseUser: any) => {
         if (!firebaseUser) {
           // 未登录，重定向到登录页
           router.push('/?login=true');
@@ -30,12 +32,13 @@ export default function CheckoutPage() {
         setUser(firebaseUser);
         setLoading(false);
       });
-
-      return unsubscribe;
     };
 
-    const cleanup = initAuth();
-    return () => { cleanup.then(unsubscribe => unsubscribe && unsubscribe()); };
+    initAuth();
+    
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, [router]);
 
   const handleSubscribe = async () => {

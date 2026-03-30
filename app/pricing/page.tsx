@@ -24,19 +24,22 @@ export default function PricingPage() {
 
   useEffect(() => {
     // 动态导入 Firebase（只在客户端运行）
+    let unsubscribe: (() => void) | null = null;
+    
     const initAuth = async () => {
-      const { auth, onAuthStateChanged } = await import('@/lib/firebase');
+      const { onAuthChange } = await import('@/lib/firebase');
       
-      const unsubscribe = onAuthStateChanged(auth, (firebaseUser: any) => {
+      unsubscribe = onAuthChange((firebaseUser: any) => {
         setUser(firebaseUser);
         setLoading(false);
       });
-
-      return unsubscribe;
     };
 
-    const cleanup = initAuth();
-    return () => { cleanup.then(unsubscribe => unsubscribe && unsubscribe()); };
+    initAuth();
+    
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
   return (
