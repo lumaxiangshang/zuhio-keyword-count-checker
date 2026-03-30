@@ -111,8 +111,6 @@ export async function GET(request: NextRequest) {
         subscriptionPlan: true,
         subscriptionStatus: true,
         createdAt: true,
-        todayUsage: true,
-        lastUsageDate: true,
       },
     });
 

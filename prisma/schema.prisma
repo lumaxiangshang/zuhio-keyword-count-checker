@@ -24,10 +24,6 @@ model User {
   subscriptionPlan      SubscriptionPlan @default(FREE)
   subscriptionStatus    SubscriptionStatus @default(INACTIVE)
   
-  // 使用统计
-  todayUsage            Int       @default(0)
-  lastUsageDate         DateTime?
-  
   // 关系
   subscriptions         Subscription[]
   subscriptionEvents    SubscriptionEvent[]
