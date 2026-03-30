@@ -102,8 +102,6 @@ export async function POST(request: NextRequest) {
             where: { id: subscription.id },
             data: { 
               status: 'CANCELLED',
-              cancelledAt: new Date(),
-              cancelReason: resource.cancellation_note || 'User cancelled',
             },
           });
 
