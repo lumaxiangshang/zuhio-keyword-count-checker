@@ -202,7 +202,7 @@ function PricingCard({
   highlighted?: boolean;
   savings?: string;
   onSelect: () => void;
-  user: any;
+  user?: any;
 }) {
   return (
     <div
