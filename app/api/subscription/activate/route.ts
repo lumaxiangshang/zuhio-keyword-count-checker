@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
   console.log(`[${reqId}] Activate Subscription - Request received`);
 
   try {
-    const { subscriptionId, planKey } = await request.json();
+    const { subscriptionId, baToken, token } = await request.json();
 
     if (!subscriptionId) {
       return NextResponse.json(
@@ -78,6 +78,10 @@ export async function POST(request: NextRequest) {
     // 获取订阅详情
     const paypalSubscription = await getSubscriptionDetails(subscriptionId, accessToken);
     const userEmail = paypalSubscription.subscriber?.email_address;
+    
+    if (!userEmail) {
+      throw new Error('No email found in PayPal subscription');
+    }
 
     if (!userEmail) {
       throw new Error('No email found in PayPal subscription');
