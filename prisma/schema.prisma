@@ -87,8 +87,6 @@ model Subscription {
   // 周期信息
   currentPeriodStart  DateTime
   currentPeriodEnd    DateTime
-  trialStart          DateTime?     // 试用开始
-  trialEnd            DateTime?     // 试用结束
   cancelledAt         DateTime?     // 取消时间
   cancelReason        String?       // 取消原因
   
