@@ -2,16 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { User as FirebaseUser } from 'firebase/auth';
 import Link from 'next/link';
 import paypalConfig, { type PlanKey } from '@/lib/paypal-config';
 
 export default function PricingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [user, setUser] = useState<any>(null);
   const [billingCycle, setBillingCycle] = useState<'MONTHLY' | 'YEARLY'>('MONTHLY');
   const [loading, setLoading] = useState(true);
 
@@ -26,12 +23,20 @@ export default function PricingPage() {
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
-      setLoading(false);
-    });
+    // 动态导入 Firebase（只在客户端运行）
+    const initAuth = async () => {
+      const { auth, onAuthStateChanged } = await import('@/lib/firebase');
+      
+      const unsubscribe = onAuthStateChanged(auth, (firebaseUser: any) => {
+        setUser(firebaseUser);
+        setLoading(false);
+      });
 
-    return () => unsubscribe();
+      return unsubscribe;
+    };
+
+    const cleanup = initAuth();
+    return () => { cleanup.then(unsubscribe => unsubscribe && unsubscribe()); };
   }, []);
 
   return (

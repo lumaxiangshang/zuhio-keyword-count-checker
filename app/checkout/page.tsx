@@ -2,16 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { User as FirebaseUser } from 'firebase/auth';
 import Link from 'next/link';
 import paypalConfig, { type PlanKey } from '@/lib/paypal-config';
 
 export default function CheckoutPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,17 +17,25 @@ export default function CheckoutPage() {
   const plan = paypalConfig.plans[planKey] || paypalConfig.plans.proMonthly;
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      if (!firebaseUser) {
-        // 未登录，重定向到登录页
-        router.push('/?login=true');
-        return;
-      }
-      setUser(firebaseUser);
-      setLoading(false);
-    });
+    // 动态导入 Firebase（只在客户端运行）
+    const initAuth = async () => {
+      const { auth, onAuthStateChanged } = await import('@/lib/firebase');
+      
+      const unsubscribe = onAuthStateChanged(auth, (firebaseUser: any) => {
+        if (!firebaseUser) {
+          // 未登录，重定向到登录页
+          router.push('/?login=true');
+          return;
+        }
+        setUser(firebaseUser);
+        setLoading(false);
+      });
 
-    return () => unsubscribe();
+      return unsubscribe;
+    };
+
+    const cleanup = initAuth();
+    return () => { cleanup.then(unsubscribe => unsubscribe && unsubscribe()); };
   }, [router]);
 
   const handleSubscribe = async () => {
